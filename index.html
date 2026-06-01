@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>KRP ID Activation - Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        
+        body { background-color: #f4f7fe; color: #2b3674; padding: 15px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        /* Profile Header */
+        .profile-header {
+            background-color: #1b2559; color: white; border-radius: 15px; padding: 20px;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+            box-shadow: 0 10px 20px rgba(27, 37, 89, 0.1); flex-wrap: wrap; gap: 15px;
+        }
+        .profile-info h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+        .profile-info p { font-size: 12px; color: #a3aed1; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .view-filter { display: flex; align-items: center; gap: 10px; font-size: 14px; flex-wrap: wrap; }
+        .view-filter select { padding: 8px 15px; border-radius: 8px; border: none; font-weight: 600; outline: none; }
+        .btn-toggle-view { background: #4318ff; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+        .btn-settings { background: #ff9800; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+        
+        /* UPI Banner */
+        .upi-banner {
+            background: white; border-left: 6px solid #05cd99; border-radius: 15px; padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;
+        }
+        .upi-left { display: flex; align-items: center; gap: 15px; }
+        .upi-icon { background: #e6fcf5; color: #05cd99; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .upi-text h3 { font-size: 14px; color: #1b2559; }
+        .upi-text p { font-size: 11px; color: #a3aed1; }
+        .upi-right { display: flex; gap: 10px; align-items: center; width: 100%; max-width: 350px; }
+        .upi-input { flex: 1; padding: 10px; border: 1px solid #e0e5f2; border-radius: 8px; outline: none; }
+        .btn-update { background: #05cd99; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        
+        /* Stats Cards */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: white; border-radius: 15px; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 15px rgba(0,0,0,0.02); }
+        .stat-info h4 { font-size: 12px; color: #a3aed1; font-weight: 500; margin-bottom: 5px; }
+        .stat-count { font-size: 20px; font-weight: 700; color: #1b2559; margin-bottom: 5px; }
+        .stat-amount { font-size: 13px; font-weight: 600; color: #4318ff; }
+        .stat-icon { font-size: 24px; color: #e0e5f2; }
+        
+        /* Tabs */
+        .nav-tabs { display: flex; background: white; border-radius: 30px; padding: 5px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 25px; font-weight: 600; color: #a3aed1; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .tab-btn.active { background: #1b2559; color: white; }
+        .tab-content { display: none; animation: fadeIn 0.4s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Tracker & Forms */
+        .tracker-container { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); }
+        .section-title { font-size: 16px; font-weight: 700; color: #1b2559; display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-left: 4px solid #4318ff; padding-left: 10px; }
+        .toolbar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .search-box { flex: 1; padding: 10px; border: 1px solid #e0e5f2; border-radius: 8px; outline: none; min-width: 150px; }
+        .filter-select { padding: 10px; border: 1px solid #e0e5f2; border-radius: 8px; outline: none; min-width: 130px; background: white; }
+        .btn-outline { border: 1px solid #e0e5f2; background: white; color: #1b2559; padding: 10px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .table-wrapper { overflow-x: auto; border-radius: 10px; border: 1px solid #e0e5f2; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: #f4f7fe; color: #a3aed1; font-weight: 600; text-align: left; padding: 12px 10px; white-space: nowrap; }
+        td { padding: 12px 10px; border-bottom: 1px solid #e0e5f2; color: #2b3674; font-weight: 500; }
+        
+        /* Mobile Card View */
+        .mobile-card-view table, .mobile-card-view thead, .mobile-card-view tbody, .mobile-card-view th, .mobile-card-view td, .mobile-card-view tr { display: block; }
+        .mobile-card-view thead tr { position: absolute; top: -9999px; left: -9999px; }
+        .mobile-card-view tr { border: 1px solid #e0e5f2; border-radius: 10px; margin-bottom: 15px; background: #fff; padding: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .mobile-card-view td { border: none; border-bottom: 1px solid #f4f7fe; position: relative; padding: 10px 10px 10px 50%; text-align: right; }
+        .mobile-card-view td:last-child { border-bottom: 0; text-align: center; padding-left: 10px; padding-top: 15px; }
+        .mobile-card-view td:before { position: absolute; top: 10px; left: 10px; width: 45%; padding-right: 10px; white-space: nowrap; text-align: left; font-weight: 700; color: #a3aed1; content: attr(data-label); }
+        .mobile-card-view .action-icons { justify-content: center; width: 100%; }
+        
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; display: inline-block; }
+        .badge-success { background: #e6fcf5; color: #05cd99; }
+        .badge-pending { background: #fff5e6; color: #ff9800; }
+        .badge-failed { background: #ffe6e6; color: #ee5d50; }
+        .badge-refund { background: #e6f2ff; color: #4318ff; }
+        .badge-advance { background: #f0f0f0; color: #333; }
+        .badge-partial { background: #e6f2ff; color: #ff9800; border: 1px dashed #ff9800; }
+        
+        .action-icons { display: flex; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
+        .action-btn { width: 28px; height: 28px; border-radius: 6px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; }
+        .btn-whatsapp { background: #e6fcf5; color: #05cd99; }
+        .btn-edit { background: #e6f2ff; color: #4318ff; }
+        .btn-config { background: #fff5e6; color: #ff9800; }
+        .btn-delete { background: #ffe6e6; color: #ee5d50; }
+        .btn-print { background: #f4f7fe; color: #1b2559; border: 1px solid #e0e5f2; }
+        .btn-bell { background: #ffe6e6; color: #ee5d50; animation: pulse 2s infinite; }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Form Styles */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-weight: 600; margin-bottom: 5px; color: #2b3674; font-size: 12px; }
+        .form-group label.required::after { content: " *"; color: #ee5d50; }
+        .form-group input, .form-group select, .form-group textarea { padding: 10px; border: 1px solid #e0e5f2; border-radius: 8px; font-size: 13px; background: white; outline: none; }
+        .btn-submit { background: #4318ff; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 15px; width: 100%; max-width: 250px; }
+        
+        .multi-select-container { position: relative; }
+        .multi-select-display { padding: 10px; border: 1px solid #e0e5f2; border-radius: 8px; font-size: 13px; cursor: pointer; background: #fff; min-height: 40px; display: flex; align-items: center; justify-content: space-between; color: #777; }
+        .multi-select-display.has-value { color: #000; }
+        .multi-select-display::after { content: '▼'; font-size: 10px; color: #777; margin-left: 10px; }
+        .multi-select-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #e0e5f2; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); max-height: 250px; overflow-y: auto; z-index: 100; margin-top: 5px; padding: 5px 0; }
+        .multi-select-dropdown.show { display: block; }
+        .multi-select-option { display: flex; align-items: center; padding: 8px 15px; cursor: pointer; font-size: 13px; }
+        .multi-select-option input { margin-right: 12px; cursor: pointer; }
+        
+        /* Modals */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 20, 55, 0.8); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 15px; overflow-y: auto; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; padding: 20px; border-radius: 24px; width: 100%; max-width: 400px; }
+        .modal-content.large-modal { max-width: 900px; margin: auto; border-radius: 15px; }
+        .modal-header { font-size: 18px; font-weight: 700; color: #1b2559; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0e5f2; padding-bottom: 12px; }
+        .close-modal { cursor: pointer; color: #ee5d50; font-size: 22px; }
+
+        .qr-preview-box { background: #ffffff; padding: 15px; border-radius: 20px; margin: 10px 0; }
+        #qrCodeContainer { display: flex; justify-content: center; margin: 10px 0; }
+        .qr-info-text { margin-top: 10px; font-size: 13px; background: #f4f7fe; padding: 10px; border-radius: 12px; word-break: break-all; text-align: left; }
+        .remarks-input { margin: 12px 0 4px 0; text-align: left; }
+        .remarks-input label { font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px; color: #2b3674; }
+        .remarks-input textarea { width: 100%; padding: 10px; border: 1px solid #e0e5f2; border-radius: 10px; font-size: 13px; resize: vertical; outline: none; }
+        .btn-copy-link { background: #4318ff; color: white; border: none; padding: 10px; border-radius: 30px; font-weight: 600; margin-top: 8px; width: 100%; cursor: pointer; font-size: 13px; }
+        .btn-share-wa { background: #25D366; color: white; border: none; padding: 12px 20px; border-radius: 40px; font-weight: 700; margin-top: 12px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-size: 14px; }
+
+        .print-choice-box { display: flex; gap: 15px; margin-top: 15px; }
+        .btn-choice { flex: 1; padding: 15px; border-radius: 12px; border: 2px solid #e0e5f2; background: white; font-weight: 700; font-size: 14px; cursor: pointer; text-align: center; color: #1b2559; transition: 0.2s; }
+        .btn-choice:hover { border-color: #4318ff; background: #e6f2ff; }
+
+        /* Messages */
+        .message { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 12px; background: white; box-shadow: 0 5px 20px rgba(0,0,0,0.2); z-index: 3000; animation: slideIn 0.3s ease; font-weight: 600; }
+        .message.success { background: #e6fcf5; color: #05cd99; border-left: 4px solid #05cd99; }
+        .message.error   { background: #ffe6e6; color: #ee5d50; border-left: 4px solid #ee5d50; }
+        .message.pending { background: #e6f2ff; color: #4318ff; border-left: 4px solid #4318ff; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Print Layout Styles (Hidden on Screen) */
+        #printTemplate { display: none; }
+        @media print {
+            body * { visibility: hidden; }
+            #printTemplate, #printTemplate * { visibility: visible; }
+            #printTemplate { display: block !important; position: absolute; left: 0; top: 0; width: 100%; color: #000; background: white; font-size: 12px; }
+            .no-print { display: none !important; }
+        }
+        .invoice-box { max-width: 800px; margin: auto; padding: 20px; border: 1px solid #eee; background: #fff; }
+        .invoice-box table { width: 100%; text-align: left; border-collapse: collapse; }
+        .invoice-box table td { padding: 6px; vertical-align: top; }
+        .invoice-box table tr.heading td { background: #f8f9fa; border-bottom: 2px solid #ddd; font-weight: bold; }
+        .invoice-box table tr.item td { border-bottom: 1px solid #eee; }
+        .invoice-box table tr.total td:nth-child(2) { border-top: 2px solid #eee; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="profile-header">
+        <div class="profile-info">
+            <h1><i class="fas fa-chart-line"></i> Arjun Malviya</h1>
+            <p>
+                <span><i class="fas fa-phone-alt"></i> +91 9521867142</span> |
+                <span><i class="fas fa-envelope"></i> arjunmalviya166@gmail.com</span> |
+                <span><i class="fas fa-map-marker-alt"></i> Kota, RJ</span>
+            </p>
+        </div>
+        <div class="view-filter">
+            <button class="btn-settings" onclick="openSettingsModal()"><i class="fas fa-cog"></i> Settings</button>
+            <i class="fas fa-filter"></i> VIEW:
+            <select id="mainMonthFilter" onchange="loadTrackerData(false)"><option value="all">All Months</option></select>
+            <button class="btn-toggle-view" onclick="toggleViewMode()" id="viewModeBtn"><i class="fas fa-mobile-alt"></i> Mobile View</button>
+        </div>
+    </div>
+
+    <div class="upi-banner">
+        <div class="upi-left">
+            <div class="upi-icon"><i class="fas fa-wallet"></i></div>
+            <div class="upi-text">
+                <h3>Merchant UPI VPA Configuration</h3>
+                <p>यहाँ अपनी सक्रिय UPI ID अपडेट करें। QR कोड इसी ID पर बदलेगा।</p>
+            </div>
+        </div>
+        <div class="upi-right">
+            <input type="text" class="upi-input" id="globalUpiId" value="9521867142-5@ybl">
+            <button class="btn-update" onclick="updateUPIMessage()"><i class="fas fa-sync-alt"></i> Update</button>
+        </div>
+    </div>
+
+    <div class="stats-grid" id="statsArea"></div>
+
+    <div class="nav-tabs">
+        <button class="tab-btn" onclick="switchTab('form')"><i class="fas fa-pen"></i> Data Entry</button>
+        <button class="tab-btn active" onclick="switchTab('tracker')"><i class="fas fa-list-ul"></i> Data Tracker</button>
+    </div>
+
+    <div id="trackerTab" class="tab-content active">
+        <div class="tracker-container">
+            <div class="section-title"><i class="fas fa-chart-bar"></i> All Transactions</div>
+            <div class="toolbar">
+                <input type="text" id="searchInput" class="search-box" placeholder="Search Invoice / Contact / UTR" onkeyup="loadTrackerData(false)">
+                <select id="statusFilter" class="filter-select" onchange="loadTrackerData(false)">
+                    <option value="all">All Status</option>
+                    <option value="SUCCESS">Success</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="PARTIAL">Partial Paid</option>
+                    <option value="FAILED">Failed</option>
+                    <option value="REFUND">Refund</option>
+                    <option value="ADVANCE">Advance</option>
+                </select>
+                <button type="button" class="btn-outline" onclick="exportToExcel()"><i class="fas fa-file-excel" style="color:#1d6f42;"></i> Export</button>
+                <button type="button" class="btn-outline" onclick="loadTrackerData(true)"><i class="fas fa-redo-alt"></i> Refresh</button>
+            </div>
+            <div class="table-wrapper" id="tableContainer">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>Invoice</th><th>Date</th><th>Contact</th><th>Bank</th>
+                            <th>Status</th><th>Dealing Amt</th><th>Amt Deno</th><th>UTR</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="9" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="formTab" class="tab-content">
+        <div class="tracker-container">
+            <div class="section-title"><i class="fas fa-plus-circle"></i> Create New Entry</div>
+            <form id="entryForm" onsubmit="submitNewEntry(event)">
+                <div class="form-grid">
+                    <div class="form-group"><label class="required">Invoice (Auto)</label><input type="text" id="invoiceNo" required readonly placeholder="Generating..."></div>
+                    <div class="form-group"><label class="required">Date</label><input type="date" id="date" required onchange="generateInvoiceNo()"></div>
+                    <div class="form-group"><label class="required">Contact No / Name</label><input type="text" id="contactName" required></div>
+                    <div class="form-group"><label>Bank Name</label><input type="text" id="bankOwner"></div>
+                    <div class="form-group">
+                        <label>State</label>
+                        <select id="state">
+                            <option value="">Select State</option>
+                            <option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option><option>Bihar</option>
+                            <option>Chhattisgarh</option><option>Goa</option><option>Gujarat</option><option>Haryana</option>
+                            <option>Himachal Pradesh</option><option>Jharkhand</option><option>Karnataka</option><option>Kerala</option>
+                            <option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option><option>Meghalaya</option>
+                            <option>Mizoram</option><option>Nagaland</option><option>Odisha</option><option>Punjab</option>
+                            <option>Rajasthan</option><option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option>
+                            <option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option><option>West Bengal</option>
+                            <option>Delhi</option><option>Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group multi-select-container">
+                        <label>Purpose</label>
+                        <div class="multi-select-display" id="purpose-display" onclick="toggleDropdown('purpose-dropdown')">Select Purpose...</div>
+                        <input type="hidden" id="purpose">
+                        <div class="multi-select-dropdown" id="purpose-dropdown">
+                            <label class="multi-select-option"><input type="checkbox" value="LOAN APPLICATION ID" onchange="updateMultiSelect('purpose')"> LOAN APPLICATION ID</label>
+                            <label class="multi-select-option"><input type="checkbox" value="IS / PRI ID" onchange="updateMultiSelect('purpose')"> IS / PRI ID</label>
+                            <label class="multi-select-option"><input type="checkbox" value="ROLLOVER ID" onchange="updateMultiSelect('purpose')"> ROLLOVER ID</label>
+                            <label class="multi-select-option"><input type="checkbox" value="INTREST SUBVENTION" onchange="updateMultiSelect('purpose')"> INTREST SUBVENTION</label>
+                            <label class="multi-select-option"><input type="checkbox" value="UPARJAN (LOAN ENTRY)" onchange="updateMultiSelect('purpose')"> UPARJAN (LOAN ENTRY)</label>
+                            <label class="multi-select-option"><input type="checkbox" value="ERP" onchange="updateMultiSelect('purpose')"> ERP</label>
+                            <label class="multi-select-option"><input type="checkbox" value="DISCRIPENCY" onchange="updateMultiSelect('purpose')"> DISCRIPENCY</label>
+                            <label class="multi-select-option"><input type="checkbox" value="OPTOUT" onchange="updateMultiSelect('purpose')"> OPTOUT</label>
+                            <label class="multi-select-option"><input type="checkbox" value="PMFBY KHARIF" onchange="updateMultiSelect('purpose')"> PMFBY KHARIF</label>
+                            <label class="multi-select-option"><input type="checkbox" value="PMFBY RABI" onchange="updateMultiSelect('purpose')"> PMFBY RABI</label>
+                            <label class="multi-select-option"><input type="checkbox" value="P-Pacs" onchange="updateMultiSelect('purpose')"> P-Pacs</label>
+                        </div>
+                    </div>
+                    <div class="form-group multi-select-container">
+                        <label>Service Charge Remarks</label>
+                        <div class="multi-select-display" id="serviceRemarks-display" onclick="toggleDropdown('serviceRemarks-dropdown')">Select Remarks...</div>
+                        <input type="hidden" id="serviceRemarks">
+                        <div class="multi-select-dropdown" id="serviceRemarks-dropdown">
+                            <label class="multi-select-option"><input type="checkbox" value="NORMAL" onchange="updateMultiSelect('serviceRemarks')"> NORMAL</label>
+                            <label class="multi-select-option"><input type="checkbox" value="DATA UPLOADING" onchange="updateMultiSelect('serviceRemarks')"> DATA UPLOADING</label>
+                            <label class="multi-select-option"><input type="checkbox" value="DATA SETUP" onchange="updateMultiSelect('serviceRemarks')"> DATA SETUP</label>
+                            <label class="multi-select-option"><input type="checkbox" value="SOFTWARE SETUP" onchange="updateMultiSelect('serviceRemarks')"> SOFTWARE SETUP</label>
+                            <label class="multi-select-option"><input type="checkbox" value="ADVANCE" onchange="updateMultiSelect('serviceRemarks')"> ADVANCE</label>
+                            <label class="multi-select-option"><input type="checkbox" value="REMAINING AMOUNT" onchange="updateMultiSelect('serviceRemarks')"> REMAINING AMOUNT</label>
+                            <label class="multi-select-option"><input type="checkbox" value="ACTIVATION PENDING" onchange="updateMultiSelect('serviceRemarks')"> ACTIVATION PENDING</label>
+                            <label class="multi-select-option"><input type="checkbox" value="AMT ADJUSTED" onchange="updateMultiSelect('serviceRemarks')"> AMT ADJUSTED</label>
+                            <label class="multi-select-option"><input type="checkbox" value="VENDOR" onchange="updateMultiSelect('serviceRemarks')"> VENDOR</label>
+                            <label class="multi-select-option"><input type="checkbox" value="OTHER" onchange="updateMultiSelect('serviceRemarks')"> OTHER</label>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>Login ID</label><input type="text" id="loginId"></div>
+                    <div class="form-group"><label>Dealing Amount (₹)</label><input type="number" id="dealingAmount" step="0.01" oninput="calcNewAmt()"></div>
+                    <div class="form-group"><label>Amount Deno (₹)</label><input type="text" id="amountDeno"></div>
+                    <div class="form-group"><label>Received Amount (₹)</label><input type="number" id="receivedAmount" step="0.01" oninput="calcNewAmt()"></div>
+                    <div class="form-group"><label>ID Activation Amount (₹)</label><input type="number" id="idActivationAmount" step="0.01" oninput="calcNewAmt()"></div>
+                    <div class="form-group"><label>UPLOADING OR SETUP AMOUNT (₹)</label><input type="number" id="uploadingAmount" step="0.01" readonly></div>
+                    <div class="form-group"><label>UTR / TRN NO.</label><input type="text" id="utrNo"></div>
+                    <div class="form-group">
+                        <label class="required">Payment Status</label>
+                        <select id="paymentStatus" required disabled>
+                            <option value="SUCCESS">Success</option>
+                            <option value="PENDING" selected>Pending</option>
+                            <option value="PARTIAL">Partial Paid</option>
+                            <option value="FAILED">Failed</option>
+                            <option value="REFUND">Refund</option>
+                            <option value="ADVANCE">Advance</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;"><label>Remarks</label><textarea id="remarks" rows="2"></textarea></div>
+                </div>
+                <button type="submit" class="btn-submit"><i class="fas fa-plus"></i> Save New Record</button>
+            </form>
+        </div>
+    </div>
+
+</div><div class="modal-overlay" id="fullEditModal">
+    <div class="modal-content large-modal">
+        <div class="modal-header">
+            <span><i class="fas fa-edit"></i> Edit Record</span>
+            <i class="fas fa-times close-modal" onclick="closeFullEditModal()"></i>
+        </div>
+        <form id="editForm" onsubmit="submitFullEdit(event)">
+            <input type="hidden" id="edit_rowId">
+            <div class="form-grid">
+                <div class="form-group"><label>Invoice No (Locked)</label><input type="text" id="edit_invoiceNo" readonly></div>
+                <div class="form-group"><label class="required">Date</label><input type="date" id="edit_date" required></div>
+                <div class="form-group"><label class="required">Contact No / Name</label><input type="text" id="edit_contactName" required></div>
+                <div class="form-group"><label>Bank Name</label><input type="text" id="edit_bankOwner"></div>
+                <div class="form-group">
+                    <label>State</label>
+                    <select id="edit_state">
+                        <option value="">Select State</option>
+                        <option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option><option>Bihar</option>
+                        <option>Chhattisgarh</option><option>Goa</option><option>Gujarat</option><option>Haryana</option>
+                        <option>Himachal Pradesh</option><option>Jharkhand</option><option>Karnataka</option><option>Kerala</option>
+                        <option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option><option>Meghalaya</option>
+                        <option>Mizoram</option><option>Nagaland</option><option>Odisha</option><option>Punjab</option>
+                        <option>Rajasthan</option><option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option>
+                        <option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option><option>West Bengal</option>
+                        <option>Delhi</option><option>Other</option>
+                    </select>
+                </div>
+                <div class="form-group multi-select-container">
+                    <label>Purpose</label>
+                    <div class="multi-select-display" id="edit_purpose-display" onclick="toggleDropdown('edit_purpose-dropdown')">Select Purpose...</div>
+                    <input type="hidden" id="edit_purpose">
+                    <div class="multi-select-dropdown" id="edit_purpose-dropdown">
+                        <label class="multi-select-option"><input type="checkbox" value="LOAN APPLICATION ID" onchange="updateMultiSelect('edit_purpose')"> LOAN APPLICATION ID</label>
+                        <label class="multi-select-option"><input type="checkbox" value="IS / PRI ID" onchange="updateMultiSelect('edit_purpose')"> IS / PRI ID</label>
+                        <label class="multi-select-option"><input type="checkbox" value="ROLLOVER ID" onchange="updateMultiSelect('edit_purpose')"> ROLLOVER ID</label>
+                        <label class="multi-select-option"><input type="checkbox" value="INTREST SUBVENTION" onchange="updateMultiSelect('edit_purpose')"> INTREST SUBVENTION</label>
+                        <label class="multi-select-option"><input type="checkbox" value="UPARJAN (LOAN ENTRY)" onchange="updateMultiSelect('edit_purpose')"> UPARJAN (LOAN ENTRY)</label>
+                        <label class="multi-select-option"><input type="checkbox" value="ERP" onchange="updateMultiSelect('edit_purpose')"> ERP</label>
+                        <label class="multi-select-option"><input type="checkbox" value="DISCRIPENCY" onchange="updateMultiSelect('edit_purpose')"> DISCRIPENCY</label>
+                        <label class="multi-select-option"><input type="checkbox" value="OPTOUT" onchange="updateMultiSelect('edit_purpose')"> OPTOUT</label>
+                        <label class="multi-select-option"><input type="checkbox" value="PMFBY KHARIF" onchange="updateMultiSelect('edit_purpose')"> PMFBY KHARIF</label>
+                        <label class="multi-select-option"><input type="checkbox" value="PMFBY RABI" onchange="updateMultiSelect('edit_purpose')"> PMFBY RABI</label>
+                        <label class="multi-select-option"><input type="checkbox" value="P-Pacs" onchange="updateMultiSelect('edit_purpose')"> P-Pacs</label>
+                    </div>
+                </div>
+                <div class="form-group multi-select-container">
+                    <label>Service Charge Remarks</label>
+                    <div class="multi-select-display" id="edit_serviceRemarks-display" onclick="toggleDropdown('edit_serviceRemarks-dropdown')">Select Remarks...</div>
+                    <input type="hidden" id="edit_serviceRemarks">
+                    <div class="multi-select-dropdown" id="edit_serviceRemarks-dropdown">
+                        <label class="multi-select-option"><input type="checkbox" value="NORMAL" onchange="updateMultiSelect('edit_serviceRemarks')"> NORMAL</label>
+                        <label class="multi-select-option"><input type="checkbox" value="DATA UPLOADING" onchange="updateMultiSelect('edit_serviceRemarks')"> DATA UPLOADING</label>
+                        <label class="multi-select-option"><input type="checkbox" value="DATA SETUP" onchange="updateMultiSelect('edit_serviceRemarks')"> DATA SETUP</label>
+                        <label class="multi-select-option"><input type="checkbox" value="SOFTWARE SETUP" onchange="updateMultiSelect('edit_serviceRemarks')"> SOFTWARE SETUP</label>
+                        <label class="multi-select-option"><input type="checkbox" value="ADVANCE" onchange="updateMultiSelect('edit_serviceRemarks')"> ADVANCE</label>
+                        <label class="multi-select-option"><input type="checkbox" value="REMAINING AMOUNT" onchange="updateMultiSelect('edit_serviceRemarks')"> REMAINING AMOUNT</label>
+                        <label class="multi-select-option"><input type="checkbox" value="ACTIVATION PENDING" onchange="updateMultiSelect('edit_serviceRemarks')"> ACTIVATION PENDING</label>
+                        <label class="multi-select-option"><input type="checkbox" value="AMT ADJUSTED" onchange="updateMultiSelect('edit_serviceRemarks')"> AMT ADJUSTED</label>
+                        <label class="multi-select-option"><input type="checkbox" value="VENDOR" onchange="updateMultiSelect('edit_serviceRemarks')"> VENDOR</label>
+                        <label class="multi-select-option"><input type="checkbox" value="OTHER" onchange="updateMultiSelect('edit_serviceRemarks')"> OTHER</label>
+                    </div>
+                </div>
+                <div class="form-group"><label>Login ID</label><input type="text" id="edit_loginId"></div>
+                <div class="form-group"><label>Dealing Amount (₹)</label><input type="number" id="edit_dealingAmount" step="0.01" oninput="calcEditAmt()"></div>
+                <div class="form-group"><label>Amount Deno (₹)</label><input type="text" id="edit_amountDeno"></div>
+                <div class="form-group"><label>Received Amount (₹)</label><input type="number" id="edit_receivedAmount" step="0.01" oninput="calcEditAmt()"></div>
+                <div class="form-group"><label>ID Activation Amount (₹)</label><input type="number" id="edit_idActivationAmount" step="0.01" oninput="calcEditAmt()"></div>
+                <div class="form-group"><label>UPLOADING OR SETUP AMOUNT (₹)</label><input type="number" id="edit_uploadingAmount" step="0.01" readonly></div>
+                <div class="form-group"><label>UTR / TRN NO.</label><input type="text" id="edit_utrNo"></div>
+                <div class="form-group">
+                    <label class="required">Payment Status</label>
+                    <select id="edit_paymentStatus" required disabled>
+                        <option value="SUCCESS">Success</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="PARTIAL">Partial Paid</option>
+                        <option value="FAILED">Failed</option>
+                        <option value="REFUND">Refund</option>
+                        <option value="ADVANCE">Advance</option>
+                    </select>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;"><label>Remarks</label><textarea id="edit_remarks" rows="2"></textarea></div>
+            </div>
+            <button type="submit" class="btn-submit" style="background:#05cd99;"><i class="fas fa-check"></i> Update Record</button>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="paymentModal">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <span>💳 Quick Update</span>
+            <i class="fas fa-times close-modal" onclick="closePaymentModal()"></i>
+        </div>
+        <input type="hidden" id="modalRowIndex">
+        <div class="form-group" style="margin-bottom: 15px;"><label>Invoice No.</label><input type="text" id="modalInvoiceDisplay" readonly></div>
+        <div class="form-group" style="margin-bottom: 15px;"><label>UTR / TRN NO.</label><input type="text" id="modalUtr"></div>
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label>Status</label>
+            <select id="modalStatus">
+                <option value="SUCCESS">Success</option>
+                <option value="PENDING">Pending</option>
+                <option value="PARTIAL">Partial Paid</option>
+                <option value="FAILED">Failed</option>
+                <option value="REFUND">Refund</option>
+                <option value="ADVANCE">Advance</option>
+            </select>
+        </div>
+        <button type="button" class="btn-submit" style="margin-top:0; width:100%;" onclick="savePaymentUpdate()">Update</button>
+    </div>
+</div>
+
+<div id="qrShareModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 460px; text-align: center;">
+        <div class="modal-header" style="justify-content: center; position: relative;">
+            <span><i class="fas fa-qrcode"></i> Share Payment Request</span>
+            <i class="fas fa-times close-modal" onclick="closeQRModal()" style="position: absolute; right: 0;"></i>
+        </div>
+        <div class="qr-preview-box">
+            <div id="qrCodeContainer"></div>
+            <div class="qr-info-text" id="qrAmountDesc"></div>
+            <div class="remarks-input">
+                <label><i class="fas fa-comment-dots"></i> Remarks / Purpose (Optional)</label>
+                <textarea id="whatsappRemarks" rows="2" placeholder="Add any special note, purpose, or instruction for customer..."></textarea>
+            </div>
+            <button class="btn-copy-link" id="copyLinkBtn"><i class="fas fa-link"></i> Copy Payment Link</button>
+        </div>
+        <button class="btn-share-wa" id="whatsappShareBtn"><i class="fab fa-whatsapp"></i> Share QR + Link on WhatsApp</button>
+        <p style="font-size: 11px; margin-top: 14px; color: #777;">
+            ✅ Customer can scan QR or click link to pay instantly.<br>
+            📱 Mobile: QR image auto-attached. Desktop: image downloads, attach manually.
+        </p>
+    </div>
+</div>
+
+<div id="settingsModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <span><i class="fas fa-sliders-h"></i> Business Settings (Vyapar Options)</span>
+            <i class="fas fa-times close-modal" onclick="closeSettingsModal()"></i>
+        </div>
+        <form onsubmit="saveBusinessSettings(event)">
+            <div class="form-group" style="margin-bottom:10px;"><label>Business Name</label><input type="text" id="bizName" value="KRP ID Activation"></div>
+            <div class="form-group" style="margin-bottom:10px;"><label>Contact Number</label><input type="text" id="bizPhone" value="+91 9521867142"></div>
+            <div class="form-group" style="margin-bottom:10px;"><label>Email Address</label><input type="email" id="bizEmail" value="arjunmalviya166@gmail.com"></div>
+            <div class="form-group" style="margin-bottom:10px;"><label>GSTIN (Optional)</label><input type="text" id="bizGst" placeholder="Enter GSTIN if any"></div>
+            <div class="form-group" style="margin-bottom:10px;"><label>Business Address</label><textarea id="bizAddress" rows="2">Kota, Rajasthan</textarea></div>
+            <button type="submit" class="btn-submit" style="width:100%; max-width:none; background:#ff9800;">Save Configuration</button>
+        </form>
+    </div>
+</div>
+
+<div id="printChoiceModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <span>📄 Generate Document</span>
+            <i class="fas fa-times close-modal" onclick="closePrintChoiceModal()"></i>
+        </div>
+        <p style="font-size:13px; color:#a3aed1;">Aap is record ke liye kya generate karna chahte hain?</p>
+        <div class="print-choice-box">
+            <button class="btn-choice" onclick="generateDoc('INVOICE')"><i class="fas fa-file-invoice-dollar" style="color:#4318ff; display:block; font-size:22px; margin-bottom:8px;"></i> Tax Invoice</button>
+            <button class="btn-choice" onclick="generateDoc('CHALLAN')"><i class="fas fa-truck" style="color:#05cd99; display:block; font-size:22px; margin-bottom:8px;"></i> Delivery Challan</button>
+        </div>
+    </div>
+</div>
+
+<div id="invoicePreviewModal" class="modal-overlay">
+    <div class="modal-content large-modal" style="background: #f4f7fe; max-width: 850px;">
+        <div class="modal-header">
+            <span>📄 Document Preview</span>
+            <i class="fas fa-times close-modal" onclick="closeInvoicePreviewModal()"></i>
+        </div>
+        <div id="previewContainer" style="background: white; padding: 20px; border-radius: 10px; max-height: 60vh; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 20px;">
+        </div>
+        <div style="display: flex; gap: 15px;">
+            <button class="btn-submit" style="flex:1;" onclick="window.print()"><i class="fas fa-print"></i> Print Document</button>
+            <button class="btn-submit" style="flex:1; background: #25D366;" id="sharePdfBtn" onclick="shareInvoicePDF()"><i class="fab fa-whatsapp"></i> Share PDF on WhatsApp</button>
+        </div>
+    </div>
+</div>
+
+<div id="printTemplate">
+    <div class="invoice-box">
+        <table cellpadding="0" cellspacing="0">
+            <tr class="top">
+                <td colspan="2">
+                    <table>
+                        <tr>
+                            <td style="font-size: 24px; font-weight:bold; color:#1b2559;" id="p_companyName">KRP ID Activation</td>
+                            <td style="text-align: right;">
+                                <span style="font-size:18px; font-weight:bold;" id="p_docType">TAX INVOICE</span><br>
+                                <strong>Invoice #:</strong> <span id="p_invNo">-</span><br>
+                                <strong>Date:</strong> <span id="p_date">-</span>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr class="information">
+                <td colspan="2">
+                    <hr style="margin: 15px 0; border:0; border-top:1px solid #eee;">
+                    <table>
+                        <tr>
+                            <td>
+                                <strong>From:</strong><br>
+                                <span id="p_fromName">KRP ID Activation</span><br>
+                                <span id="p_fromAddress">Kota, RJ</span><br>
+                                Phone: <span id="p_fromPhone">9521867142</span><br>
+                                <span id="p_fromGst"></span>
+                            </td>
+                            <td style="text-align: right;">
+                                <strong>To (Customer):</strong><br>
+                                <span id="p_toName">-</span><br>
+                                State: <span id="p_toState">-</span><br>
+                                Login ID: <span id="p_toLogin">-</span>
+                            </td>
+                        </tr>
+                    </table>
+                    <hr style="margin: 15px 0; border:0; border-top:1px solid #eee;">
+                </td>
+            </tr>
+            <tr class="heading">
+                <td>Description / Purpose</td>
+                <td style="text-align: right;">Amount</td>
+            </tr>
+            <tr class="item">
+                <td><span id="p_purpose">ID Activation Charges</span><br><small style="color:#666;" id="p_remarks"></small></td>
+                <td style="text-align: right;">₹<span id="p_amount">0.00</span></td>
+            </tr>
+            <tr class="total">
+                <td></td>
+                <td style="text-align: right; font-size:15px;">
+                   <strong>Total Received: ₹<span id="p_total">0.00</span></strong>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="padding-top: 50px;">
+                    <table style="border:0;">
+                        <tr>
+                            <td><small style="color:#777;">* This is a computer generated document, no signature required.</small></td>
+                            <td style="text-align: right; font-weight: bold;">Authorized Signatory</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<script>
+    // ─── CONFIG ───────────────────────────────────────────────────
+    // YAHAN APNA APPS SCRIPT URL ZAROOR PASTE KAREIN
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFrLTW2tMUueKM6z2bk_GzVf1SZp7AFPwdnsVY6jfIouGCJLh57E8mEgDUtTtFUcIM/exec';
+
+    let currentData = [], currentHeaders = [], isMobileView = false;
+    let currentQRPayload = null;
+    let currentQRCanvas = null;
+    let selectedRowForPrint = null;
+
+    // ─── INIT ─────────────────────────────────────────────────────
+    function getLocalISODate(dateObj) {
+        if (!dateObj || isNaN(new Date(dateObj))) return '';
+        const d = new Date(dateObj);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    window.onload = function() {
+        document.getElementById('date').value = getLocalISODate(new Date());
+        populateMonthsDropdown();
+        loadSavedBusinessSettings();
+        if (window.innerWidth < 768) toggleViewMode();
+        loadTrackerData(true);
+    };
+
+    // ─── VYAPAR SETTINGS LOGIC ────────────────────────────────────
+    function loadSavedBusinessSettings() {
+        if(localStorage.getItem('biz_name')) document.getElementById('bizName').value = localStorage.getItem('biz_name');
+        if(localStorage.getItem('biz_phone')) document.getElementById('bizPhone').value = localStorage.getItem('biz_phone');
+        if(localStorage.getItem('biz_email')) document.getElementById('bizEmail').value = localStorage.getItem('biz_email');
+        if(localStorage.getItem('biz_gst')) document.getElementById('bizGst').value = localStorage.getItem('biz_gst');
+        if(localStorage.getItem('biz_address')) document.getElementById('bizAddress').value = localStorage.getItem('biz_address');
+    }
+
+    function openSettingsModal() { document.getElementById('settingsModal').classList.add('active'); }
+    function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('active'); }
+    
+    function saveBusinessSettings(e) {
+        e.preventDefault();
+        localStorage.setItem('biz_name', document.getElementById('bizName').value);
+        localStorage.setItem('biz_phone', document.getElementById('bizPhone').value);
+        localStorage.setItem('biz_email', document.getElementById('bizEmail').value);
+        localStorage.setItem('biz_gst', document.getElementById('bizGst').value);
+        localStorage.setItem('biz_address', document.getElementById('bizAddress').value);
+        showMessage("Vyapar Settings Saved Successfully!", "success");
+        closeSettingsModal();
+    }
+
+    // ─── PRINT LOGIC ──────────────────────────────────────────────
+    function openPrintChoice(rowIndex) {
+        selectedRowForPrint = rowIndex;
+        document.getElementById('printChoiceModal').classList.add('active');
+    }
+    function closePrintChoiceModal() { document.getElementById('printChoiceModal').classList.remove('active'); }
+
+    function generateDoc(type) {
+        const record = currentData[selectedRowForPrint];
+        if(!record) return;
+
+        document.getElementById('p_fromName').innerText = localStorage.getItem('biz_name') || "KRP ID Activation";
+        document.getElementById('p_companyName').innerText = localStorage.getItem('biz_name') || "KRP ID Activation";
+        document.getElementById('p_fromPhone').innerText = localStorage.getItem('biz_phone') || "+91 9521867142";
+        document.getElementById('p_fromAddress').innerText = localStorage.getItem('biz_address') || "Kota, RJ";
+        const gst = localStorage.getItem('biz_gst');
+        document.getElementById('p_fromGst').innerText = gst ? "GSTIN: " + gst : "";
+
+        document.getElementById('p_docType').innerText = type === 'INVOICE' ? 'TAX INVOICE' : 'DELIVERY CHALLAN';
+
+        document.getElementById('p_invNo').innerText = record[getColIndex('INVOICE NO.')] || '-';
+        document.getElementById('p_date').innerText = getLocalISODate(record[getColIndex('DATE')]);
+        document.getElementById('p_toName').innerText = record[getColIndex('CONTACT NO. OR NAME')] || '-';
+        document.getElementById('p_toState').innerText = record[getColIndex('STATE')] || '-';
+        document.getElementById('p_toLogin').innerText = record[getColIndex('LOGIN ID')] || '-';
+        document.getElementById('p_purpose').innerText = record[getColIndex('PURPOSE')] || 'ID Activation Work';
+        document.getElementById('p_remarks').innerText = record[getColIndex('REMARKS')] ? "Note: " + record[getColIndex('REMARKS')] : '';
+        
+        let amt = parseFloat(record[getColIndex('DEALING AMOUNT')] || 0);
+        let recv = parseFloat(record[getColIndex('RECEIVED AMOUNT')] || 0);
+
+        document.getElementById('p_amount').innerText = amt.toLocaleString('en-IN', {minimumFractionDigits: 2});
+        document.getElementById('p_total').innerText = recv.toLocaleString('en-IN', {minimumFractionDigits: 2});
+
+        closePrintChoiceModal();
+        document.getElementById('previewContainer').innerHTML = document.querySelector('.invoice-box').outerHTML;
+        document.getElementById('invoicePreviewModal').classList.add('active');
+    }
+
+    function closeInvoicePreviewModal() {
+        document.getElementById('invoicePreviewModal').classList.remove('active');
+    }
+
+    async function shareInvoicePDF() {
+        const btn = document.getElementById('sharePdfBtn');
+        const ogText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+        btn.disabled = true;
+
+        try {
+            const element = document.getElementById('previewContainer').querySelector('.invoice-box');
+            const opt = {
+                margin:       10,
+                filename:     `Invoice_${document.getElementById('p_invNo').innerText}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+            const file = new File([pdfBlob], opt.filename, { type: 'application/pdf' });
+
+            const record = currentData[selectedRowForPrint];
+            const contact = record[getColIndex('CONTACT NO. OR NAME')] || 'Customer';
+            const message = `Hello ${contact},\n\nPlease find your requested document attached.\n\nRegards,\n${localStorage.getItem('biz_name') || 'KRP ID Activation'}`;
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: 'Document',
+                    text: message,
+                    files: [file]
+                });
+                showMessage('Shared successfully!', 'success');
+            } else {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(pdfBlob);
+                link.download = opt.filename;
+                link.click();
+                URL.revokeObjectURL(link.href);
+                
+                const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message + '\n\n(I have downloaded the PDF, I will attach it manually)')}`;
+                window.open(waUrl, '_blank');
+                showMessage('PDF downloaded! Attach it in WhatsApp.', 'success');
+            }
+        } catch (e) {
+            console.error('PDF Share Error:', e);
+            showMessage('Error sharing PDF', 'error');
+        } finally {
+            btn.innerHTML = ogText;
+            btn.disabled = false;
+        }
+    }
+
+    // ─── WHATSAPP DUE REMINDER LOGIC ──────────────────────────────
+    function sendWhatsAppReminder(rowIndex) {
+        const record = currentData[rowIndex];
+        if(!record) return;
+
+        const upiId = document.getElementById('globalUpiId').value.trim() || '9521867142-5@ybl';
+        const clientName = record[getColIndex('CONTACT NO. OR NAME')] || 'Customer';
+        const invoiceNo = record[getColIndex('INVOICE NO.')] || 'INV';
+        const dealingAmt = parseFloat(record[getColIndex('DEALING AMOUNT')] || 0);
+        const receivedAmt = parseFloat(record[getColIndex('RECEIVED AMOUNT')] || 0);
+        const dueAmt = (dealingAmt - receivedAmt).toFixed(2);
+        const purpose = record[getColIndex('PURPOSE')] || 'ID Activation Work';
+
+        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=Arjun%20Malviya&am=${dueAmt}&cu=INR&tn=${encodeURIComponent('DUE-' + invoiceNo)}&tr=${invoiceNo}`;
+        const bizName = localStorage.getItem('biz_name') || "KRP ID Activation";
+
+        const messageText = 
+            `⚠️ *PAYMENT REMINDER* ⚠️\n\n` +
+            `🏢 *${bizName.toUpperCase()}*\n` +
+            `🧾 Invoice No: ${invoiceNo}\n` +
+            `👤 Customer: ${clientName}\n` +
+            `📌 Work: ${purpose}\n` +
+            `━━━━━━━━━━━━━━━━━━━\n` +
+            `💰 Total Deal Amt: ₹${dealingAmt.toLocaleString('en-IN')}\n` +
+            `✅ Amount Paid: ₹${receivedAmt.toLocaleString('en-IN')}\n` +
+            `🚨 *BALANCE DUE: ₹${parseFloat(dueAmt).toLocaleString('en-IN')}*\n` +
+            `━━━━━━━━━━━━━━━━━━━\n\n` +
+            `🔗 *Instant Payment Link (Click to Pay):*\n${upiLink}\n\n` +
+            `Aap upar diye gaye link par click karke ya QR scan karke baki bacha hua payment clear kar sakte hain. Thank you!\n\n` +
+            `📞 Arjun Malviya | 9521867142`;
+
+        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
+        window.open(waUrl, '_blank');
+        showMessage("Reminder Text Sent to WhatsApp!", "success");
+    }
+
+    // ─── VIEW TOGGLE ──────────────────────────────────────────────
+    function toggleViewMode() {
+        isMobileView = !isMobileView;
+        const container = document.getElementById('tableContainer');
+        const btn = document.getElementById('viewModeBtn');
+        if (isMobileView) {
+            container.classList.add('mobile-card-view');
+            btn.innerHTML = '<i class="fas fa-desktop"></i> Desktop View';
+            btn.style.background = '#05cd99';
+        } else {
+            container.classList.remove('mobile-card-view');
+            btn.innerHTML = '<i class="fas fa-mobile-alt"></i> Mobile View';
+            btn.style.background = '#4318ff';
+        }
+    }
+
+    // ─── TABS ─────────────────────────────────────────────────────
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        if (tab === 'form') {
+            document.getElementById('formTab').classList.add('active');
+            document.querySelector('.tab-btn:first-child').classList.add('active');
+            generateInvoiceNo();
+        } else {
+            document.getElementById('trackerTab').classList.add('active');
+            document.querySelector('.tab-btn:last-child').classList.add('active');
+            loadTrackerData(false);
+        }
+    }
+
+    // ─── MONTH DROPDOWN ───────────────────────────────────────────
+    function populateMonthsDropdown() {
+        const select = document.getElementById('mainMonthFilter');
+        const now = new Date();
+        select.innerHTML = '<option value="all" selected>All Months</option>';
+        for (let i = 0; i < 6; i++) {
+            let d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            let val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+            let txt = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+            select.innerHTML += `<option value="${val}">${txt}</option>`;
+        }
+    }
+
+    // ─── HELPERS ──────────────────────────────────────────────────
+    const getColIndex = (name) => currentHeaders.findIndex(h => h && h.toString().trim().toUpperCase() === name.toUpperCase());
+
+    function generateInvoiceNo() {
+        const dateInput = document.getElementById('date').value;
+        if (!dateInput) return;
+        const parts = dateInput.split('-');
+        if (parts.length !== 3) return;
+        const prefix = `INV-${parts[0]}${parts[1]}${parts[2]}-`;
+        let maxCounter = 1000;
+        if (currentData.length > 0) {
+            const invIdx = getColIndex('INVOICE NO.');
+            if (invIdx !== -1) {
+                currentData.forEach(row => {
+                    const inv = row[invIdx] ? row[invIdx].toString() : '';
+                    if (inv.startsWith(prefix)) {
+                        const counter = parseInt(inv.split('-')[2], 10);
+                        if (!isNaN(counter) && counter > maxCounter) maxCounter = counter;
+                    }
+                });
+            }
+        }
+        document.getElementById('invoiceNo').value = `${prefix}${maxCounter + 1}`;
+    }
+
+    // Auto calculate Due Amount balance on Data Entry
+    function calcNewAmt() {
+        const d = parseFloat(document.getElementById('dealingAmount').value) || 0;
+        const r = parseFloat(document.getElementById('receivedAmount').value) || 0;
+        const i = parseFloat(document.getElementById('idActivationAmount').value) || 0;
+        document.getElementById('uploadingAmount').value = (d - i).toFixed(2);
+        
+        const statusEl = document.getElementById('paymentStatus');
+        if (r > 0) {
+            statusEl.disabled = false;
+        } else {
+            statusEl.value = 'PENDING';
+            statusEl.disabled = true;
+        }
+    }
+    // Auto calculate Due Amount balance on Edit Modal
+    function calcEditAmt() {
+        const d = parseFloat(document.getElementById('edit_dealingAmount').value) || 0;
+        const r = parseFloat(document.getElementById('edit_receivedAmount').value) || 0;
+        const i = parseFloat(document.getElementById('edit_idActivationAmount').value) || 0;
+        document.getElementById('edit_uploadingAmount').value = (d - i).toFixed(2);
+        
+        const statusEl = document.getElementById('edit_paymentStatus');
+        if (r > 0) {
+            statusEl.disabled = false;
+        } else {
+            statusEl.value = 'PENDING';
+            statusEl.disabled = true;
+        }
+    }
+
+    // ─── MULTI-SELECT ─────────────────────────────────────────────
+    function toggleDropdown(id) {
+        document.querySelectorAll('.multi-select-dropdown').forEach(d => { if (d.id !== id) d.classList.remove('show'); });
+        document.getElementById(id).classList.toggle('show');
+    }
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.multi-select-container')) {
+            document.querySelectorAll('.multi-select-dropdown').forEach(d => d.classList.remove('show'));
+        }
+    });
+    function updateMultiSelect(fieldId) {
+        const dropdown = document.getElementById(fieldId + '-dropdown');
+        const values = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        document.getElementById(fieldId).value = values.join(', ');
+        const display = document.getElementById(fieldId + '-display');
+        if (values.length > 0) { display.textContent = values.join(', '); display.classList.add('has-value'); }
+        else { display.textContent = 'Select...'; display.classList.remove('has-value'); }
+    }
+    function setMultiSelectState(fieldId, valueStr) {
+        const values = valueStr.split(',').map(s => s.trim()).filter(s => s);
+        const dropdown = document.getElementById(fieldId + '-dropdown');
+        dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = values.includes(cb.value); });
+        const display = document.getElementById(fieldId + '-display');
+        document.getElementById(fieldId).value = values.join(', ');
+        if (values.length > 0) { display.textContent = values.join(', '); display.classList.add('has-value'); }
+        else { display.textContent = 'Select...'; display.classList.remove('has-value'); }
+    }
+    function resetNewFormMultiSelect() { setMultiSelectState('purpose', ''); setMultiSelectState('serviceRemarks', ''); }
+
+    // ─── LOAD DATA ────────────────────────────────────────────────
+    async function loadTrackerData(forceRefresh = false) {
+        const term    = document.getElementById('searchInput').value.toLowerCase();
+        const statusF = document.getElementById('statusFilter').value;
+        const monthF  = document.getElementById('mainMonthFilter').value;
+        if (forceRefresh || currentData.length === 0) {
+            try {
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Loading Data...</td></tr>';
+                const response = await fetch(`${APPS_SCRIPT_URL}?action=getData&t=${Date.now()}`);
+                const result   = await response.json();
+                if (result.success && result.data) {
+                    currentHeaders = result.headers;
+                    currentData    = result.data;
+                    generateInvoiceNo();
+                }
+            } catch (error) {
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" style="text-align:center;">❌ Connection error</td></tr>';
+                return;
+            }
+        }
+        renderTable(term, statusF, monthF);
+    }
+
+    // ─── RENDER TABLE ─────────────────────────────────────────────
+    function renderTable(term, statusF, monthF) {
+        if (!currentHeaders.length) return;
+        const idxInv     = getColIndex('INVOICE NO.');
+        const idxDate    = getColIndex('DATE');
+        const idxContact = getColIndex('CONTACT NO. OR NAME');
+        const idxBank    = getColIndex('BANK OWNER NAME');
+        const idxStatus  = getColIndex('PAYMENT STATUS');
+        const idxDealing = getColIndex('DEALING AMOUNT');
+        const idxAmtDeno = getColIndex('AMOUNT DENO');
+        const idxUtr     = getColIndex('UTR / TRN NO.');
+
+        let filtered = currentData.filter(row => {
+            if (statusF !== 'all' && idxStatus !== -1 && (row[idxStatus]?.toString().toUpperCase() || '') !== statusF) return false;
+            if (monthF !== 'all' && idxDate !== -1) {
+                let dStr = getLocalISODate(row[idxDate]);
+                if (!dStr || !dStr.startsWith(monthF)) return false;
+            }
+            if (term && !row.some(cell => cell && cell.toString().toLowerCase().includes(term))) return false;
+            return true;
+        });
+
+        updateStats(filtered);
+
+        if (!filtered.length) {
+            document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px;">📭 No records found</td></tr>';
+            return;
+        }
+
+        let html = '';
+        filtered.forEach(row => {
+            const originalIdx = currentData.indexOf(row);
+            let statusVal  = row[idxStatus]?.toString().toUpperCase() || 'PENDING';
+            let badgeClass = statusVal === 'SUCCESS' ? 'badge-success' :
+                             statusVal === 'FAILED'  ? 'badge-failed'  :
+                             statusVal === 'REFUND'  ? 'badge-refund'  :
+                             statusVal === 'ADVANCE' ? 'badge-advance' : 
+                             statusVal === 'PARTIAL' ? 'badge-partial' : 'badge-pending';
+            let dateDisplay = getLocalISODate(row[idxDate]);
+
+            // Reminder Bell button visibility conditions
+            let reminderButtonHtml = (statusVal === 'PENDING' || statusVal === 'PARTIAL') ? 
+                `<button type="button" class="action-btn btn-bell" onclick="sendWhatsAppReminder(${originalIdx})" title="Send WhatsApp Payment Reminder"><i class="fas fa-bell"></i></button>` : '';
+
+            html += `<tr>
+                <td data-label="Invoice"><strong>${row[idxInv] || '-'}</strong></td>
+                <td data-label="Date">${dateDisplay}</td>
+                <td data-label="Contact">${row[idxContact] || '-'}</td>
+                <td data-label="Bank">${row[idxBank] || '-'}</td>
+                <td data-label="Status"><span class="badge ${badgeClass}">${statusVal}</span></td>
+                <td data-label="Dealing Amt">₹${parseFloat(row[idxDealing]||0).toLocaleString('en-IN')}</td>
+                <td data-label="Amt Deno">₹${parseFloat(row[idxAmtDeno]||0).toLocaleString('en-IN')}</td>
+                <td data-label="UTR">${row[idxUtr] || '-'}</td>
+                <td data-label="Actions">
+                    <div class="action-icons">
+                        <button type="button" class="action-btn btn-whatsapp" onclick="openQRAndShare(${originalIdx})" title="Share on WhatsApp"><i class="fab fa-whatsapp"></i></button>
+                        ${reminderButtonHtml}
+                        <button type="button" class="action-btn btn-print"    onclick="openPrintChoice(${originalIdx})" title="Print Invoice / Challan"><i class="fas fa-print"></i></button>
+                        <button type="button" class="action-btn btn-edit"     onclick="openFullEditModal(${originalIdx})" title="Full Edit"><i class="fas fa-edit"></i></button>
+                        <button type="button" class="action-btn btn-config"   onclick="openPaymentModal(${originalIdx})" title="Quick Update"><i class="fas fa-sliders-h"></i></button>
+                        <button type="button" class="action-btn btn-delete"   onclick="deleteRecord(${originalIdx})" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        document.getElementById('tableBody').innerHTML = html;
+    }
+
+    // ─── UPDATED STATS WITH DUE TRACKER ───────────────────────────
+    function updateStats(data) {
+        const idxStatus  = getColIndex('PAYMENT STATUS');
+        const idxRecv    = getColIndex('RECEIVED AMOUNT');
+        const idxDealing = getColIndex('DEALING AMOUNT');
+        const idxSetup   = getColIndex('UPLOADING OR SETUP AMOUNT');
+        const idxLogin   = getColIndex('LOGIN ID');
+        const idxIdAct   = getColIndex('ID ACTIVATION AMOUNT');
+
+        let pCount=0,pAmt=0,sCount=0,sAmt=0,advCount=0,advAmt=0,refCount=0,refAmt=0, partialCount=0;
+        let totCount=data.length,totAmt=0,setupCount=0,setupAmt=0,idCount=0,idActAmt=0, totalDueAmt=0;
+
+        data.forEach(row => {
+            let status  = row[idxStatus]?.toString().toUpperCase() || '';
+            let rAmt    = parseFloat(row[idxRecv])    || 0;
+            let dAmt    = parseFloat(row[idxDealing]) || 0;
+            let supAmt  = parseFloat(row[idxSetup])   || 0;
+            let idAmt   = parseFloat(row[idxIdAct])   || 0;
+            let loginId = row[idxLogin]?.toString().trim() || '';
+            
+            if (status !== 'REFUND') {
+                if (loginId !== '') idCount++;
+                idActAmt += idAmt;
+                
+                if (supAmt !== 0) setupCount++;
+                setupAmt += supAmt;
+
+                // Calculate Due Amount Market Outstanding
+                let due = dAmt - rAmt;
+                if(due > 0 && (status === 'PENDING' || status === 'PARTIAL')) {
+                    totalDueAmt += due;
+                }
+            }
+
+            if      (status === 'PENDING') { pCount++;   pAmt   += dAmt; totAmt += dAmt; }
+            else if (status === 'PARTIAL') { partialCount++; sAmt += rAmt; totAmt += rAmt; }
+            else if (status === 'SUCCESS') { sCount++;   sAmt   += rAmt; totAmt += rAmt; }
+            else if (status === 'ADVANCE') { advCount++; advAmt += rAmt; totAmt += rAmt; }
+            else if (status === 'REFUND')  { refCount++; refAmt += rAmt; }
+            else totAmt += rAmt;
+        });
+
+        document.getElementById('statsArea').innerHTML = `
+            <div class="stat-card"><div class="stat-info"><h4 style="color:#ee5d50;">Pending / Partial</h4><div class="stat-count" style="color:#ee5d50;">${pCount + partialCount}</div><div class="stat-amount" style="color:#ee5d50;">₹${pAmt.toLocaleString('en-IN')}</div></div></div>
+            <div class="stat-card"><div class="stat-info"><h4>Success</h4><div class="stat-count">${sCount}</div><div class="stat-amount">₹${sAmt.toLocaleString('en-IN')}</div></div></div>
+            <div class="stat-card"><div class="stat-info"><h4>Refund</h4><div class="stat-count">${refCount}</div><div class="stat-amount">₹${refAmt.toLocaleString('en-IN')}</div></div></div>
+            <div class="stat-card"><div class="stat-info"><h4>Total IDs</h4><div class="stat-count">${idCount}</div><div class="stat-amount" style="color:#05cd99;">₹${idActAmt.toLocaleString('en-IN')}</div></div></div>
+            <div class="stat-card"><div class="stat-info"><h4>Total Records</h4><div class="stat-count">${totCount}</div><div class="stat-amount">₹${totAmt.toLocaleString('en-IN')}</div></div></div>
+            <div class="stat-card"><div class="stat-info"><h4>Setup Amt</h4><div class="stat-count">${setupCount}</div><div class="stat-amount">₹${setupAmt.toLocaleString('en-IN')}</div></div></div>
+        `;
+    }
+
+    // ─── SUBMIT NEW ENTRY ─────────────────────────────────────────
+    async function submitNewEntry(event) {
+        event.preventDefault();
+        const btn = event.target.querySelector('.btn-submit');
+        const ogText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        btn.disabled = true;
+
+        const formData = new URLSearchParams();
+        formData.append('action',            'add');
+        formData.append('invoiceNo',         document.getElementById('invoiceNo').value);
+        formData.append('date',              document.getElementById('date').value);
+        formData.append('contactName',       document.getElementById('contactName').value);
+        formData.append('bankOwner',         document.getElementById('bankOwner').value);
+        formData.append('state',             document.getElementById('state').value);
+        formData.append('purpose',           document.getElementById('purpose').value);
+        formData.append('serviceRemarks',    document.getElementById('serviceRemarks').value);
+        formData.append('loginId',           document.getElementById('loginId').value);
+        formData.append('dealingAmount',     document.getElementById('dealingAmount').value);
+        formData.append('amountDeno',        document.getElementById('amountDeno').value);
+        formData.append('receivedAmount',    document.getElementById('receivedAmount').value);
+        formData.append('idActivationAmount',document.getElementById('idActivationAmount').value);
+        formData.append('uploadingAmount',   document.getElementById('uploadingAmount').value);
+        formData.append('utrNo',             document.getElementById('utrNo').value);
+        formData.append('paymentStatus',     document.getElementById('paymentStatus').value);
+        formData.append('remarks',           document.getElementById('remarks').value);
+
+        try {
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
+            const result   = await response.json();
+            if (result.success) {
+                showMessage(result.message, 'success');
+                document.getElementById('entryForm').reset();
+                document.getElementById('date').value = getLocalISODate(new Date());
+                resetNewFormMultiSelect();
+                switchTab('tracker');
+                loadTrackerData(true);
+            } else showMessage('Error saving data', 'error');
+        } catch (error) { showMessage('Network error', 'error'); }
+        finally { btn.innerHTML = ogText; btn.disabled = false; }
+    }
+
+    // ─── FULL EDIT MODAL ──────────────────────────────────────────
+    function openFullEditModal(rowIndex) {
+        const record = currentData[rowIndex];
+        document.getElementById('edit_rowId').value             = rowIndex;
+        document.getElementById('edit_invoiceNo').value         = record[getColIndex('INVOICE NO.')] || '';
+        document.getElementById('edit_date').value              = getLocalISODate(record[getColIndex('DATE')]);
+        document.getElementById('edit_contactName').value       = record[getColIndex('CONTACT NO. OR NAME')] || '';
+        document.getElementById('edit_bankOwner').value         = record[getColIndex('BANK OWNER NAME')] || '';
+        document.getElementById('edit_state').value             = record[getColIndex('STATE')] || '';
+        setMultiSelectState('edit_purpose',        record[getColIndex('PURPOSE')] || '');
+        setMultiSelectState('edit_serviceRemarks', record[getColIndex('SERVICE CHARGE REMARKS')] || '');
+        document.getElementById('edit_loginId').value           = record[getColIndex('LOGIN ID')] || '';
+        document.getElementById('edit_dealingAmount').value     = record[getColIndex('DEALING AMOUNT')] || '';
+        document.getElementById('edit_amountDeno').value        = record[getColIndex('AMOUNT DENO')] || '';
+        document.getElementById('edit_receivedAmount').value    = record[getColIndex('RECEIVED AMOUNT')] || '';
+        document.getElementById('edit_idActivationAmount').value= record[getColIndex('ID ACTIVATION AMOUNT')] || '';
+        document.getElementById('edit_uploadingAmount').value   = record[getColIndex('UPLOADING OR SETUP AMOUNT')] || '';
+        document.getElementById('edit_utrNo').value             = record[getColIndex('UTR / TRN NO.')] || '';
+        const rAmt = parseFloat(record[getColIndex('RECEIVED AMOUNT')]) || 0;
+        const statusEl = document.getElementById('edit_paymentStatus');
+        statusEl.value = record[getColIndex('PAYMENT STATUS')] || 'PENDING';
+        statusEl.disabled = (rAmt <= 0);
+        if (rAmt <= 0) statusEl.value = 'PENDING';
+
+        document.getElementById('edit_remarks').value           = record[getColIndex('REMARKS')] || '';
+        document.getElementById('fullEditModal').classList.add('active');
+    }
+    function closeFullEditModal() { document.getElementById('fullEditModal').classList.remove('active'); }
+
+    async function submitFullEdit(event) {
+        event.preventDefault();
+        const btn = document.getElementById('editForm').querySelector('.btn-submit');
+        const ogText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+        btn.disabled = true;
+
+        const rowIndex = document.getElementById('edit_rowId').value;
+        const formData = new URLSearchParams();
+        formData.append('action',            'update');
+        formData.append('row',               rowIndex);
+        formData.append('invoiceNo',         document.getElementById('edit_invoiceNo').value);
+        formData.append('date',              document.getElementById('edit_date').value);
+        formData.append('contactName',       document.getElementById('edit_contactName').value);
+        formData.append('bankOwner',         document.getElementById('edit_bankOwner').value);
+        formData.append('state',             document.getElementById('edit_state').value);
+        formData.append('purpose',           document.getElementById('edit_purpose').value);
+        formData.append('serviceRemarks',    document.getElementById('edit_serviceRemarks').value);
+        formData.append('loginId',           document.getElementById('edit_loginId').value);
+        formData.append('dealingAmount',     document.getElementById('edit_dealingAmount').value);
+        formData.append('amountDeno',        document.getElementById('edit_amountDeno').value);
+        formData.append('receivedAmount',    document.getElementById('edit_receivedAmount').value);
+        formData.append('idActivationAmount',document.getElementById('edit_idActivationAmount').value);
+        formData.append('uploadingAmount',   document.getElementById('edit_uploadingAmount').value);
+        formData.append('utrNo',             document.getElementById('edit_utrNo').value);
+        formData.append('paymentStatus',     document.getElementById('edit_paymentStatus').value);
+        formData.append('remarks',           document.getElementById('edit_remarks').value);
+
+        try {
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
+            const result   = await response.json();
+            if (result.success) {
+                showMessage('Record updated!', 'success');
+                closeFullEditModal();
+                loadTrackerData(true);
+            } else showMessage(result.message || 'Update failed', 'error');
+        } catch (error) { showMessage('Network error', 'error'); }
+        finally { btn.innerHTML = ogText; btn.disabled = false; }
+    }
+
+    // ─── QUICK UPDATE MODAL ───────────────────────────────────────
+    function openPaymentModal(rowIndex) {
+        const record = currentData[rowIndex];
+        document.getElementById('modalRowIndex').value      = rowIndex;
+        document.getElementById('modalInvoiceDisplay').value = record[getColIndex('INVOICE NO.')] || '';
+        document.getElementById('modalUtr').value           = record[getColIndex('UTR / TRN NO.')] || '';
+        document.getElementById('modalStatus').value        = record[getColIndex('PAYMENT STATUS')] || 'PENDING';
+        document.getElementById('paymentModal').classList.add('active');
+    }
+    function closePaymentModal() { document.getElementById('paymentModal').classList.remove('active'); }
+
+    async function savePaymentUpdate() {
+        const rowIndex = document.getElementById('modalRowIndex').value;
+        const newStatus = document.getElementById('modalStatus').value;
+        const newUtr    = document.getElementById('modalUtr').value.trim();
+        try {
+            showMessage('Updating...', 'pending');
+            const response = await fetch(`${APPS_SCRIPT_URL}?action=updateStatusUtr&row=${rowIndex}&status=${encodeURIComponent(newStatus)}&utr=${encodeURIComponent(newUtr)}&t=${Date.now()}`);
+            const result   = await response.json();
+            if (result.success) {
+                showMessage('Updated!', 'success');
+                closePaymentModal();
+                loadTrackerData(true);
+            } else showMessage(result.message || 'Failed', 'error');
+        } catch (e) { showMessage('Network error', 'error'); }
+    }
+
+    // ─── WHATSAPP QR SHARING ──────────────────────────────────────
+    function dataURLtoBlob(dataurl) {
+        try {
+            const arr = dataurl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], { type: mime });
+        } catch (e) {
+            console.error('Error converting dataURL to Blob:', e);
+            return null;
+        }
+    }
+
+    function openQRAndShare(rowIndex) {
+        const record = currentData[rowIndex];
+        if (!record) return;
+
+        const upiId      = document.getElementById('globalUpiId').value.trim() || '9521867142-5@ybl';
+        const contactName= record[getColIndex('CONTACT NO. OR NAME')] || 'Customer';
+        const dealingAmt = parseFloat(record[getColIndex('DEALING AMOUNT')] || 0).toFixed(2);
+        const invoice    = record[getColIndex('INVOICE NO.')] || 'INV';
+        const purpose    = record[getColIndex('PURPOSE')] || 'Payment';
+
+        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=Arjun%20Malviya&am=${dealingAmt}&cu=INR&tn=${encodeURIComponent(purpose)}&tr=${invoice}`;
+
+        currentQRPayload = { upiId, contactName, dealingAmt, invoice, purpose, upiLink };
+
+        const qrContainer = document.getElementById('qrCodeContainer');
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, { text: upiLink, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.H });
+
+        document.getElementById('qrAmountDesc').innerHTML =
+            `🧾 <strong>Invoice:</strong> ${invoice}<br>` +
+            `👤 <strong>Customer:</strong> ${contactName}<br>` +
+            `💰 <strong>Amount:</strong> ₹${parseFloat(dealingAmt).toLocaleString('en-IN')}<br>` +
+            `📱 <strong>UPI ID:</strong> ${upiId}<br>` +
+            `📌 <strong>Purpose:</strong> ${purpose}`;
+
+        const recordRemarks = record[getColIndex('REMARKS')] || '';
+        document.getElementById('whatsappRemarks').value = recordRemarks;
+
+        document.getElementById('copyLinkBtn').onclick = () => {
+            navigator.clipboard.writeText(upiLink).then(() => showMessage('UPI Link Copied!', 'success'));
+        };
+
+        document.getElementById('whatsappShareBtn').onclick = () => shareQRWithWhatsApp();
+
+        document.getElementById('qrShareModal').classList.add('active');
+    }
+
+    function shareQRWithWhatsApp() {
+        if (!currentQRPayload) return;
+        const p = currentQRPayload;
+
+        const userRemarks  = document.getElementById('whatsappRemarks').value.trim();
+        const remarksText  = userRemarks ? `\n📝 Remarks: ${userRemarks}` : '';
+        const messageText  =
+            `💸 *PAYMENT REQUEST* 💸\n\n` +
+            `🏢 *KRP ID ACTIVATION*\n` +
+            `👤 Customer: ${p.contactName}\n` +
+            `💰 Amount: ₹${parseFloat(p.dealingAmt).toLocaleString('en-IN')}\n` +
+            `📱 UPI ID: ${p.upiId}` +
+            `${remarksText}\n\n` +
+            `🔗 *Direct Payment Link:*\n${p.upiLink}\n\n` +
+            `✅ Click the link OR scan QR code to pay instantly.\n\n` +
+            `📞 Arjun Malviya | 9521867142`;
+
+        let dataUrl = '';
+        const img = document.querySelector('#qrCodeContainer img');
+        if (img && img.src && img.src.startsWith('data:')) {
+            dataUrl = img.src;
+        } else {
+            const canvas = document.querySelector('#qrCodeContainer canvas');
+            if (canvas) {
+                try {
+                    dataUrl = canvas.toDataURL('image/png');
+                } catch (e) {
+                    console.error('Canvas toDataURL failed:', e);
+                }
+            }
+        }
+
+        if (!dataUrl) {
+            showMessage('QR not ready, please try again', 'error');
+            return;
+        }
+
+        const blob = dataURLtoBlob(dataUrl);
+        if (!blob) {
+            showMessage('Failed to process QR image', 'error');
+            return;
+        }
+        const file = new File([blob], `QR_${p.invoice}.png`, { type: 'image/png' });
+
+        let canShareFiles = false;
+        try {
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                canShareFiles = true;
+            }
+        } catch (e) {
+            console.warn('canShare check failed:', e);
+        }
+
+        if (canShareFiles && navigator.share) {
+            navigator.share({ title: 'Payment Request', text: messageText, files: [file] })
+                .then(() => {
+                    showMessage('QR + Link shared successfully!', 'success');
+                    closeQRModal();
+                })
+                .catch(err => {
+                    if (err.name !== 'AbortError') {
+                        console.warn('Native share failed, using fallback:', err);
+                        desktopFallback(blob, messageText, p.invoice);
+                    }
+                });
+            return;
+        }
+
+        desktopFallback(blob, messageText, p.invoice);
+    }
+
+    function desktopFallback(blob, messageText, invoice) {
+        try {
+            const link = document.createElement('a');
+            link.download = `QR_${invoice}.png`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            URL.revokeObjectURL(link.href);
+
+            const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText + '\n\n📸 QR image downloaded — please attach it to this chat.')}`;
+            window.open(waUrl, '_blank');
+            showMessage('QR image downloaded! Attach it in WhatsApp chat.', 'success');
+            closeQRModal();
+        } catch (e) {
+            console.error('Desktop fallback failed:', e);
+            showMessage('Failed to open WhatsApp', 'error');
+        }
+    }
+
+    function closeQRModal() {
+        document.getElementById('qrShareModal').classList.remove('active');
+        currentQRPayload = null;
+    }
+
+    // ─── DELETE ───────────────────────────────────────────────────
+    async function deleteRecord(rowIndex) {
+        if (!confirm('Delete this record?')) return;
+        try {
+            showMessage('Deleting...', 'pending');
+            const response = await fetch(`${APPS_SCRIPT_URL}?action=delete&row=${rowIndex}&t=${Date.now()}`);
+            const result   = await response.json();
+            if (result.success) { showMessage('Deleted successfully', 'success'); loadTrackerData(true); }
+            else showMessage(result.message || 'Delete failed', 'error');
+        } catch (e) { showMessage('Network error', 'error'); }
+    }
+
+    // ─── EXPORT ───────────────────────────────────────────────────
+    function exportToExcel() {
+        if (!currentData.length) return alert('No data to export');
+        let csv = currentHeaders.map(h => `"${h}"`).join(',') + '\n';
+        currentData.forEach(row => {
+            csv += row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(',') + '\n';
+        });
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'KRP_Transactions.csv';
+        a.click();
+    }
+
+    // ─── UPI UPDATE ───────────────────────────────────────────────
+    function updateUPIMessage() {
+        showMessage(`UPI ID updated to: ${document.getElementById('globalUpiId').value}`, 'success');
+    }
+
+    // ─── MESSAGES ─────────────────────────────────────────────────
+    function showMessage(msg, type) {
+        let el = document.createElement('div');
+        el.className = `message ${type}`;
+        el.innerText = msg;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 3500);
+    }
+</script>
+</body>
+</html>
