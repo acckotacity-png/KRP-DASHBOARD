@@ -23,9 +23,11 @@
         .profile-info h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
         .profile-info p { font-size: 12px; color: #a3aed1; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
         .view-filter { display: flex; align-items: center; gap: 10px; font-size: 14px; flex-wrap: wrap; }
+        .tracker-dashboard-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .view-filter select { padding: 8px 15px; border-radius: 8px; border: none; font-weight: 600; outline: none; }
         .btn-toggle-view { background: #4318ff; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
         .btn-settings { background: #ff9800; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+        body.form-view .tracker-dashboard-only { display: none !important; }
         
         /* UPI Banner */
         .upi-banner {
@@ -116,6 +118,9 @@
         .multi-select-dropdown.show { display: block; }
         .multi-select-option { display: flex; align-items: center; padding: 8px 15px; cursor: pointer; font-size: 13px; }
         .multi-select-option input { margin-right: 12px; cursor: pointer; }
+        .purpose-year-row { border-top: 1px solid #e0e5f2; margin-top: 5px; padding: 10px 15px; }
+        .purpose-year-row label { display: block; font-size: 12px; color: #a3aed1; font-weight: 700; margin-bottom: 6px; }
+        .purpose-year-select { width: 100%; padding: 8px 10px; border: 1px solid #e0e5f2; border-radius: 8px; color: #2b3674; outline: none; }
         
         /* Modals */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 20, 55, 0.8); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 15px; overflow-y: auto; }
@@ -175,13 +180,15 @@
         </div>
         <div class="view-filter">
             <button class="btn-settings" onclick="openSettingsModal()"><i class="fas fa-cog"></i> Settings</button>
-            <i class="fas fa-filter"></i> VIEW:
-            <select id="mainMonthFilter" onchange="loadTrackerData(false)"><option value="all">All Months</option></select>
-            <button class="btn-toggle-view" onclick="toggleViewMode()" id="viewModeBtn"><i class="fas fa-mobile-alt"></i> Mobile View</button>
+            <div class="tracker-dashboard-only tracker-dashboard-controls">
+                <i class="fas fa-filter"></i> VIEW:
+                <select id="mainMonthFilter" onchange="loadTrackerData(false)"><option value="all">All Months</option></select>
+                <button class="btn-toggle-view" onclick="toggleViewMode()" id="viewModeBtn"><i class="fas fa-mobile-alt"></i> Mobile View</button>
+            </div>
         </div>
     </div>
 
-    <div class="upi-banner">
+    <div class="upi-banner tracker-dashboard-only">
         <div class="upi-left">
             <div class="upi-icon"><i class="fas fa-wallet"></i></div>
             <div class="upi-text">
@@ -195,7 +202,7 @@
         </div>
     </div>
 
-    <div class="stats-grid" id="statsArea"></div>
+    <div class="stats-grid tracker-dashboard-only" id="statsArea"></div>
 
     <div class="nav-tabs">
         <button class="tab-btn" onclick="switchTab('form')"><i class="fas fa-pen"></i> Data Entry</button>
@@ -217,6 +224,7 @@
                     <option value="ADVANCE">Advance</option>
                 </select>
                 <button type="button" class="btn-outline" onclick="exportToExcel()"><i class="fas fa-file-excel" style="color:#1d6f42;"></i> Export</button>
+                <button type="button" class="btn-outline" onclick="exportIdActivationData()"><i class="fas fa-id-card" style="color:#4318ff;"></i> ID Activation Export</button>
                 <button type="button" class="btn-outline" onclick="loadTrackerData(true)"><i class="fas fa-redo-alt"></i> Refresh</button>
             </div>
             <div class="table-wrapper" id="tableContainer">
@@ -274,6 +282,10 @@
                             <label class="multi-select-option"><input type="checkbox" value="PMFBY KHARIF" onchange="updateMultiSelect('purpose')"> PMFBY KHARIF</label>
                             <label class="multi-select-option"><input type="checkbox" value="PMFBY RABI" onchange="updateMultiSelect('purpose')"> PMFBY RABI</label>
                             <label class="multi-select-option"><input type="checkbox" value="P-Pacs" onchange="updateMultiSelect('purpose')"> P-Pacs</label>
+                            <div class="purpose-year-row">
+                                <label for="purposeYear">Year</label>
+                                <select id="purposeYear" class="purpose-year-select" onchange="updateMultiSelect('purpose')"></select>
+                            </div>
                         </div>
                     </div>
                     <div class="form-group multi-select-container">
@@ -361,6 +373,10 @@
                         <label class="multi-select-option"><input type="checkbox" value="PMFBY KHARIF" onchange="updateMultiSelect('edit_purpose')"> PMFBY KHARIF</label>
                         <label class="multi-select-option"><input type="checkbox" value="PMFBY RABI" onchange="updateMultiSelect('edit_purpose')"> PMFBY RABI</label>
                         <label class="multi-select-option"><input type="checkbox" value="P-Pacs" onchange="updateMultiSelect('edit_purpose')"> P-Pacs</label>
+                        <div class="purpose-year-row">
+                            <label for="editPurposeYear">Year</label>
+                            <select id="editPurposeYear" class="purpose-year-select" onchange="updateMultiSelect('edit_purpose')"></select>
+                        </div>
                     </div>
                 </div>
                 <div class="form-group multi-select-container">
@@ -586,6 +602,7 @@
     window.onload = function() {
         document.getElementById('date').value = getLocalISODate(new Date());
         populateMonthsDropdown();
+        populatePurposeYears();
         loadSavedBusinessSettings();
         if (window.innerWidth < 768) toggleViewMode();
         loadTrackerData(true);
@@ -636,7 +653,7 @@
 
         document.getElementById('p_invNo').innerText = record[getColIndex('INVOICE NO.')] || '-';
         document.getElementById('p_date').innerText = getLocalISODate(record[getColIndex('DATE')]);
-        document.getElementById('p_toName').innerText = record[getColIndex('CONTACT NO. OR NAME')] || '-';
+        document.getElementById('p_toName').innerText = showSheetText(record[getColIndex('CONTACT NO. OR NAME')]) || '-';
         document.getElementById('p_toState').innerText = record[getColIndex('STATE')] || '-';
         document.getElementById('p_toLogin').innerText = record[getColIndex('LOGIN ID')] || '-';
         document.getElementById('p_purpose').innerText = record[getColIndex('PURPOSE')] || 'ID Activation Work';
@@ -677,7 +694,7 @@
             const file = new File([pdfBlob], opt.filename, { type: 'application/pdf' });
 
             const record = currentData[selectedRowForPrint];
-            const contact = record[getColIndex('CONTACT NO. OR NAME')] || 'Customer';
+            const contact = showSheetText(record[getColIndex('CONTACT NO. OR NAME')]) || 'Customer';
             const message = `Hello ${contact},\n\nPlease find your requested document attached.\n\nRegards,\n${localStorage.getItem('biz_name') || 'KRP ID Activation'}`;
 
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -713,7 +730,7 @@
         if(!record) return;
 
         const upiId = document.getElementById('globalUpiId').value.trim() || '9521867142-5@ybl';
-        const clientName = record[getColIndex('CONTACT NO. OR NAME')] || 'Customer';
+        const clientName = showSheetText(record[getColIndex('CONTACT NO. OR NAME')]) || 'Customer';
         const invoiceNo = record[getColIndex('INVOICE NO.')] || 'INV';
         const dealingAmt = parseFloat(record[getColIndex('DEALING AMOUNT')] || 0);
         const receivedAmt = parseFloat(record[getColIndex('RECEIVED AMOUNT')] || 0);
@@ -764,10 +781,12 @@
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         if (tab === 'form') {
+            document.body.classList.add('form-view');
             document.getElementById('formTab').classList.add('active');
             document.querySelector('.tab-btn:first-child').classList.add('active');
             generateInvoiceNo();
         } else {
+            document.body.classList.remove('form-view');
             document.getElementById('trackerTab').classList.add('active');
             document.querySelector('.tab-btn:last-child').classList.add('active');
             loadTrackerData(false);
@@ -789,6 +808,14 @@
 
     // ─── HELPERS ──────────────────────────────────────────────────
     const getColIndex = (name) => currentHeaders.findIndex(h => h && h.toString().trim().toUpperCase() === name.toUpperCase());
+    function makeSheetText(value) {
+        const text = (value || '').toString().trim();
+        return text.startsWith('+') ? "'" + text : text;
+    }
+    function showSheetText(value) {
+        const text = (value || '').toString();
+        return text.startsWith("'") ? text.slice(1) : text;
+    }
 
     function generateInvoiceNo() {
         const dateInput = document.getElementById('date').value;
@@ -856,6 +883,9 @@
     function updateMultiSelect(fieldId) {
         const dropdown = document.getElementById(fieldId + '-dropdown');
         const values = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        const yearSelectId = fieldId === 'purpose' ? 'purposeYear' : fieldId === 'edit_purpose' ? 'editPurposeYear' : null;
+        const yearSelect = yearSelectId ? document.getElementById(yearSelectId) : null;
+        if (yearSelect && yearSelect.value) values.push('YEAR ' + yearSelect.value);
         document.getElementById(fieldId).value = values.join(', ');
         const display = document.getElementById(fieldId + '-display');
         if (values.length > 0) { display.textContent = values.join(', '); display.classList.add('has-value'); }
@@ -864,13 +894,31 @@
     function setMultiSelectState(fieldId, valueStr) {
         const values = valueStr.split(',').map(s => s.trim()).filter(s => s);
         const dropdown = document.getElementById(fieldId + '-dropdown');
+        const yearSelectId = fieldId === 'purpose' ? 'purposeYear' : fieldId === 'edit_purpose' ? 'editPurposeYear' : null;
+        const yearSelect = yearSelectId ? document.getElementById(yearSelectId) : null;
+        const selectedYear = values.find(v => /^YEAR\s+(\d{2}-\d{2}|\d{4})$/i.test(v));
         dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = values.includes(cb.value); });
+        if (yearSelect) yearSelect.value = selectedYear ? selectedYear.replace(/^YEAR\s+/i, '') : '';
         const display = document.getElementById(fieldId + '-display');
         document.getElementById(fieldId).value = values.join(', ');
         if (values.length > 0) { display.textContent = values.join(', '); display.classList.add('has-value'); }
         else { display.textContent = 'Select...'; display.classList.remove('has-value'); }
     }
     function resetNewFormMultiSelect() { setMultiSelectState('purpose', ''); setMultiSelectState('serviceRemarks', ''); }
+
+    function populatePurposeYears() {
+        const today = new Date();
+        const currentFyStart = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+        ['purposeYear', 'editPurposeYear'].forEach(id => {
+            const select = document.getElementById(id);
+            if (!select) return;
+            select.innerHTML = '<option value="">Select Year</option>';
+            for (let year = currentFyStart - 3; year <= currentFyStart + 3; year++) {
+                const fy = `${String(year).slice(-2)}-${String(year + 1).slice(-2)}`;
+                select.innerHTML += `<option value="${fy}">${fy}</option>`;
+            }
+        });
+    }
 
     // ─── LOAD DATA ────────────────────────────────────────────────
     async function loadTrackerData(forceRefresh = false) {
@@ -942,7 +990,7 @@
             html += `<tr>
                 <td data-label="Invoice"><strong>${row[idxInv] || '-'}</strong></td>
                 <td data-label="Date">${dateDisplay}</td>
-                <td data-label="Contact">${row[idxContact] || '-'}</td>
+                <td data-label="Contact">${showSheetText(row[idxContact]) || '-'}</td>
                 <td data-label="Bank">${row[idxBank] || '-'}</td>
                 <td data-label="Status"><span class="badge ${badgeClass}">${statusVal}</span></td>
                 <td data-label="Dealing Amt">₹${parseFloat(row[idxDealing]||0).toLocaleString('en-IN')}</td>
@@ -1027,7 +1075,7 @@
         formData.append('action',            'add');
         formData.append('invoiceNo',         document.getElementById('invoiceNo').value);
         formData.append('date',              document.getElementById('date').value);
-        formData.append('contactName',       document.getElementById('contactName').value);
+        formData.append('contactName',       makeSheetText(document.getElementById('contactName').value));
         formData.append('bankOwner',         document.getElementById('bankOwner').value);
         formData.append('state',             document.getElementById('state').value);
         formData.append('purpose',           document.getElementById('purpose').value);
@@ -1063,7 +1111,7 @@
         document.getElementById('edit_rowId').value             = rowIndex;
         document.getElementById('edit_invoiceNo').value         = record[getColIndex('INVOICE NO.')] || '';
         document.getElementById('edit_date').value              = getLocalISODate(record[getColIndex('DATE')]);
-        document.getElementById('edit_contactName').value       = record[getColIndex('CONTACT NO. OR NAME')] || '';
+        document.getElementById('edit_contactName').value       = showSheetText(record[getColIndex('CONTACT NO. OR NAME')]) || '';
         document.getElementById('edit_bankOwner').value         = record[getColIndex('BANK OWNER NAME')] || '';
         document.getElementById('edit_state').value             = record[getColIndex('STATE')] || '';
         setMultiSelectState('edit_purpose',        record[getColIndex('PURPOSE')] || '');
@@ -1099,7 +1147,7 @@
         formData.append('row',               rowIndex);
         formData.append('invoiceNo',         document.getElementById('edit_invoiceNo').value);
         formData.append('date',              document.getElementById('edit_date').value);
-        formData.append('contactName',       document.getElementById('edit_contactName').value);
+        formData.append('contactName',       makeSheetText(document.getElementById('edit_contactName').value));
         formData.append('bankOwner',         document.getElementById('edit_bankOwner').value);
         formData.append('state',             document.getElementById('edit_state').value);
         formData.append('purpose',           document.getElementById('edit_purpose').value);
@@ -1176,7 +1224,7 @@
         if (!record) return;
 
         const upiId      = document.getElementById('globalUpiId').value.trim() || '9521867142-5@ybl';
-        const contactName= record[getColIndex('CONTACT NO. OR NAME')] || 'Customer';
+        const contactName= showSheetText(record[getColIndex('CONTACT NO. OR NAME')]) || 'Customer';
         const dealingAmt = parseFloat(record[getColIndex('DEALING AMOUNT')] || 0).toFixed(2);
         const invoice    = record[getColIndex('INVOICE NO.')] || 'INV';
         const purpose    = record[getColIndex('PURPOSE')] || 'Payment';
@@ -1315,17 +1363,54 @@
     }
 
     // ─── EXPORT ───────────────────────────────────────────────────
-    function exportToExcel() {
-        if (!currentData.length) return alert('No data to export');
-        let csv = currentHeaders.map(h => `"${h}"`).join(',') + '\n';
-        currentData.forEach(row => {
-            csv += row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(',') + '\n';
+    function csvCell(value) {
+        return `"${(value || '').toString().replace(/"/g, '""')}"`;
+    }
+
+    function downloadCsv(filename, rows) {
+        let csv = currentHeaders.map(csvCell).join(',') + '\n';
+        rows.forEach(row => {
+            csv += row.map(csvCell).join(',') + '\n';
         });
         const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'KRP_Transactions.csv';
+        a.download = filename;
         a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    function exportToExcel() {
+        if (!currentData.length) return alert('No data to export');
+        downloadCsv('KRP_Transactions.csv', currentData);
+    }
+
+    function exportIdActivationData() {
+        if (!currentData.length) return alert('No data to export');
+
+        const monthF = document.getElementById('mainMonthFilter').value;
+        if (monthF === 'all') return alert('Please select a month first for ID Activation export');
+
+        const idxDate    = getColIndex('DATE');
+        const idxIdAct   = getColIndex('ID ACTIVATION AMOUNT');
+        const idxLogin   = getColIndex('LOGIN ID');
+        const idxPurpose = getColIndex('PURPOSE');
+
+        const idActivationRows = currentData.filter(row => {
+            if (idxDate !== -1) {
+                const dStr = getLocalISODate(row[idxDate]);
+                if (!dStr || !dStr.startsWith(monthF)) return false;
+            }
+
+            const idAmount = idxIdAct !== -1 ? (parseFloat(row[idxIdAct]) || 0) : 0;
+            const loginId = idxLogin !== -1 ? (row[idxLogin]?.toString().trim() || '') : '';
+            const purpose = idxPurpose !== -1 ? (row[idxPurpose]?.toString().toUpperCase() || '') : '';
+
+            return idAmount > 0 || loginId !== '' || purpose.includes('ID') || purpose.includes('ACTIVATION');
+        });
+
+        if (!idActivationRows.length) return alert('No ID Activation data found for selected month');
+        downloadCsv(`KRP_ID_Activation_${monthF}.csv`, idActivationRows);
     }
 
     // ─── UPI UPDATE ───────────────────────────────────────────────
