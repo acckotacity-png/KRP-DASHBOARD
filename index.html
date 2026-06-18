@@ -37,6 +37,34 @@
         .stat-count { font-size: 20px; font-weight: 700; color: #1b2559; margin-bottom: 5px; }
         .stat-amount { font-size: 13px; font-weight: 600; color: #4318ff; }
         .stat-icon { font-size: 24px; color: #e0e5f2; }
+
+        /* Analytics Dashboard */
+        .analytics-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 15px; }
+        .analytics-panel { background: #fff; border: 1px solid #e0e5f2; border-radius: 12px; padding: 15px; min-height: 220px; }
+        .analytics-panel.wide { grid-column: 1 / -1; }
+        .analytics-title { font-size: 13px; font-weight: 800; color: #1b2559; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        .mini-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        .mini-kpi { background: #f8fbff; border: 1px solid #e0e5f2; border-radius: 8px; padding: 12px; }
+        .mini-kpi span { display: block; color: #a3aed1; font-size: 11px; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; }
+        .mini-kpi strong { color: #1b2559; font-size: 18px; }
+        .chart-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) 86px; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 12px; color: #2b3674; }
+        .chart-track { height: 10px; background: #eef3ff; border-radius: 999px; overflow: hidden; }
+        .chart-fill { height: 100%; border-radius: inherit; background: #4318ff; min-width: 4px; }
+        .chart-fill.success { background: #05cd99; }
+        .chart-fill.pending { background: #ff9800; }
+        .chart-fill.failed { background: #ee5d50; }
+        .chart-fill.refund { background: #4318ff; }
+        .chart-value { text-align: right; font-weight: 700; color: #1b2559; }
+        .donut-wrap { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: center; gap: 18px; }
+        .donut-chart { width: 150px; height: 150px; border-radius: 50%; background: conic-gradient(#05cd99 0deg, #05cd99 var(--successDeg, 0deg), #ff9800 var(--successDeg, 0deg), #ff9800 var(--pendingDeg, 0deg), #ee5d50 var(--pendingDeg, 0deg), #ee5d50 var(--failedDeg, 0deg), #4318ff var(--failedDeg, 0deg), #4318ff 360deg); position: relative; }
+        .donut-chart::after { content: ""; position: absolute; inset: 28px; background: #fff; border-radius: 50%; }
+        .donut-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; z-index: 1; font-weight: 800; color: #1b2559; }
+        .donut-center span { font-size: 11px; color: #a3aed1; font-weight: 700; margin-top: 2px; }
+        .legend-list { display: grid; gap: 9px; font-size: 12px; }
+        .legend-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #2b3674; }
+        .legend-item span:first-child { display: flex; align-items: center; gap: 8px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; background: #4318ff; flex: 0 0 auto; }
+        .empty-analytics { color: #a3aed1; font-size: 13px; text-align: center; padding: 30px 10px; }
         
         /* Tabs */
         .nav-tabs { display: flex; background: white; border-radius: 30px; padding: 5px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); }
@@ -119,6 +147,7 @@
         .btn-delete { background: #ffe6e6; color: #ee5d50; }
         .btn-print { background: #f4f7fe; color: #1b2559; border: 1px solid #e0e5f2; }
         .btn-bell { background: #ffe6e6; color: #ee5d50; animation: pulse 2s infinite; }
+        .btn-call { background: #e6fcf5; color: #05a77d; text-decoration: none; }
         
         @keyframes pulse {
             0% { transform: scale(1); }
@@ -201,12 +230,17 @@
             #printTemplate { display: block !important; position: absolute; left: 0; top: 0; width: 100%; color: #000; background: white; font-size: 12px; }
             .no-print { display: none !important; }
         }
-        .invoice-box { max-width: 800px; margin: auto; padding: 20px; border: 1px solid #eee; background: #fff; }
+        .invoice-box { max-width: 800px; margin: auto; padding: 24px; border: 1px solid #d8deef; background: #fff; color: #1b2559; }
         .invoice-box table { width: 100%; text-align: left; border-collapse: collapse; }
-        .invoice-box table td { padding: 6px; vertical-align: top; }
-        .invoice-box table tr.heading td { background: #f8f9fa; border-bottom: 2px solid #ddd; font-weight: bold; }
-        .invoice-box table tr.item td { border-bottom: 1px solid #eee; }
-        .invoice-box table tr.total td:nth-child(2) { border-top: 2px solid #eee; font-weight: bold; }
+        .invoice-box table td { padding: 8px; vertical-align: top; }
+        .invoice-box table tr.heading td { background: #f4f7fe; border-bottom: 2px solid #d8deef; font-weight: bold; color: #1b2559; }
+        .invoice-box table tr.item td { border-bottom: 1px solid #e0e5f2; }
+        .invoice-box table tr.total td:nth-child(2) { border-top: 2px solid #d8deef; font-weight: bold; }
+        .invoice-status { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-top: 8px; }
+        .invoice-status.success { background: #e6fcf5; color: #05a77d; }
+        .invoice-status.pending { background: #fff5e6; color: #c56d00; }
+        .invoice-status.failed { background: #ffe6e6; color: #d13d31; }
+        .invoice-status.refund { background: #e6f2ff; color: #4318ff; }
 
         @media (max-width: 768px) {
             body { padding: 8px; }
@@ -258,6 +292,8 @@
                 min-width: 120px;
             }
             .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+            .analytics-grid { grid-template-columns: 1fr; }
+            .donut-wrap { grid-template-columns: 1fr; justify-items: center; }
             .stat-card { padding: 12px; border-radius: 10px; }
             .tracker-container { padding: 12px; border-radius: 12px; }
             .section-title { font-size: 14px; gap: 8px; margin-bottom: 12px; }
@@ -446,7 +482,7 @@
         }
     </style>
 </head>
-<body>
+<body class="form-view">
 <div class="container">
 
     <div class="profile-header">
@@ -471,11 +507,36 @@
     <div class="stats-grid tracker-dashboard-only" id="statsArea"></div>
 
     <div class="nav-tabs">
-        <button class="tab-btn" onclick="switchTab('form')"><i class="fas fa-pen"></i> Data Entry</button>
-        <button class="tab-btn active" onclick="switchTab('tracker')"><i class="fas fa-list-ul"></i> Data Tracker</button>
+        <button class="tab-btn active" data-tab="form" onclick="switchTab('form')"><i class="fas fa-pen"></i> Data Entry</button>
+        <button class="tab-btn" data-tab="tracker" onclick="switchTab('tracker')"><i class="fas fa-list-ul"></i> Data Tracker</button>
+        <button class="tab-btn" data-tab="dashboard" onclick="switchTab('dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</button>
     </div>
 
-    <div id="trackerTab" class="tab-content active">
+    <div id="dashboardTab" class="tab-content">
+        <div class="tracker-container">
+            <div class="section-title"><i class="fas fa-chart-pie"></i> Business Analytics</div>
+            <div id="dashboardSummary" class="mini-kpi-grid"></div>
+            <div class="analytics-grid">
+                <div class="analytics-panel">
+                    <div class="analytics-title"><i class="fas fa-circle-notch"></i> Payment Status</div>
+                    <div class="donut-wrap">
+                        <div class="donut-chart" id="statusDonut"><div class="donut-center"><strong id="donutTotal">0</strong><span>Records</span></div></div>
+                        <div class="legend-list" id="statusLegend"></div>
+                    </div>
+                </div>
+                <div class="analytics-panel">
+                    <div class="analytics-title"><i class="fas fa-list-check"></i> Purpose Wise Work</div>
+                    <div id="purposeChart"></div>
+                </div>
+                <div class="analytics-panel wide">
+                    <div class="analytics-title"><i class="fas fa-chart-column"></i> Last 6 Months Amount</div>
+                    <div id="monthlyChart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="trackerTab" class="tab-content">
         <div class="tracker-container">
             <div class="section-title"><i class="fas fa-chart-bar"></i> All Transactions</div>
             <div class="toolbar">
@@ -509,7 +570,7 @@
         </div>
     </div>
 
-    <div id="formTab" class="tab-content">
+    <div id="formTab" class="tab-content active">
         <div class="tracker-container">
             <div class="section-title"><i class="fas fa-plus-circle"></i> Create New Entry</div>
             <form id="entryForm" onsubmit="submitNewEntry(event)">
@@ -807,8 +868,7 @@
         </div>
         <p style="font-size:13px; color:#a3aed1;">Aap is record ke liye kya generate karna chahte hain?</p>
         <div class="print-choice-box">
-            <button class="btn-choice" onclick="generateDoc('INVOICE')"><i class="fas fa-file-invoice-dollar" style="color:#4318ff; display:block; font-size:22px; margin-bottom:8px;"></i> Tax Invoice</button>
-            <button class="btn-choice" onclick="generateDoc('CHALLAN')"><i class="fas fa-truck" style="color:#05cd99; display:block; font-size:22px; margin-bottom:8px;"></i> Delivery Challan</button>
+            <button class="btn-choice" onclick="generateDoc('INVOICE')"><i class="fas fa-file-invoice-dollar" style="color:#4318ff; display:block; font-size:22px; margin-bottom:8px;"></i> Invoice</button>
         </div>
     </div>
 </div>
@@ -837,9 +897,10 @@
                         <tr>
                             <td style="font-size: 24px; font-weight:bold; color:#1b2559;" id="p_companyName">KRP ID Activation</td>
                             <td style="text-align: right;">
-                                <span style="font-size:18px; font-weight:bold;" id="p_docType">TAX INVOICE</span><br>
+                                <span style="font-size:22px; font-weight:800; letter-spacing:0;" id="p_docType">INVOICE</span><br>
                                 <strong>Invoice #:</strong> <span id="p_invNo">-</span><br>
-                                <strong>Date:</strong> <span id="p_date">-</span>
+                                <strong>Date:</strong> <span id="p_date">-</span><br>
+                                <span id="p_status" class="invoice-status pending">PENDING</span>
                             </td>
                         </tr>
                     </table>
@@ -900,11 +961,13 @@
     // ─── CONFIG ───────────────────────────────────────────────────
     // YAHAN APNA APPS SCRIPT URL ZAROOR PASTE KAREIN
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFrLTW2tMUueKM6z2bk_GzVf1SZp7AFPwdnsVY6jfIouGCJLh57E8mEgDUtTtFUcIM/exec';
+    const TRACKER_CACHE_KEY = 'krp_tracker_data_cache_v1';
 
     let currentData = [], currentHeaders = [], isMobileView = false;
     let currentQRPayload = null;
     let currentQRCanvas = null;
     let selectedRowForPrint = null;
+    let isTrackerRefreshInProgress = false;
 
     // ─── INIT ─────────────────────────────────────────────────────
     function getLocalISODate(dateObj) {
@@ -919,6 +982,7 @@
         populatePurposeYears();
         loadSavedBusinessSettings();
         if (window.innerWidth < 768) toggleViewMode();
+        switchTab('form');
         loadTrackerData(true);
     };
 
@@ -951,7 +1015,7 @@
     // ─── PRINT LOGIC ──────────────────────────────────────────────
     function openPrintChoice(rowIndex) {
         selectedRowForPrint = rowIndex;
-        document.getElementById('printChoiceModal').classList.add('active');
+        generateDoc('INVOICE');
     }
     function closePrintChoiceModal() { document.getElementById('printChoiceModal').classList.remove('active'); }
 
@@ -966,7 +1030,7 @@
         const gst = localStorage.getItem('biz_gst');
         document.getElementById('p_fromGst').innerText = gst ? "GSTIN: " + gst : "";
 
-        document.getElementById('p_docType').innerText = type === 'INVOICE' ? 'TAX INVOICE' : 'DELIVERY CHALLAN';
+        document.getElementById('p_docType').innerText = 'INVOICE';
 
         document.getElementById('p_invNo').innerText = record[getColIndex('INVOICE NO.')] || '-';
         document.getElementById('p_date').innerText = getLocalISODate(record[getColIndex('DATE')]);
@@ -978,9 +1042,21 @@
         
         let amt = parseFloat(record[getColIndex('DEALING AMOUNT')] || 0);
         let recv = parseFloat(record[getColIndex('RECEIVED AMOUNT')] || 0);
+        let due = Math.max(amt - recv, 0);
+        let status = (record[getColIndex('PAYMENT STATUS')] || (due > 0 ? 'PENDING' : 'SUCCESS')).toString().toUpperCase();
+        const statusEl = document.getElementById('p_status');
+        statusEl.innerText = status;
+        statusEl.className = 'invoice-status ' + (
+            status === 'SUCCESS' ? 'success' :
+            status === 'FAILED' ? 'failed' :
+            status === 'REFUND' ? 'refund' : 'pending'
+        );
 
         document.getElementById('p_amount').innerText = amt.toLocaleString('en-IN', {minimumFractionDigits: 2});
-        document.getElementById('p_total').innerText = recv.toLocaleString('en-IN', {minimumFractionDigits: 2});
+        const totalCell = document.getElementById('p_total').closest('td');
+        totalCell.innerHTML = `
+            <strong>Total Invoice Amount: Rs. <span id="p_total">${amt.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span></strong>
+        `;
 
         closePrintChoiceModal();
         document.getElementById('previewContainer').innerHTML = document.querySelector('.invoice-box').outerHTML;
@@ -1104,12 +1180,18 @@
         if (tab === 'form') {
             document.body.classList.add('form-view');
             document.getElementById('formTab').classList.add('active');
-            document.querySelector('.tab-btn:first-child').classList.add('active');
+            document.querySelector('[data-tab="form"]').classList.add('active');
             generateInvoiceNo();
+        } else if (tab === 'dashboard') {
+            document.body.classList.remove('form-view');
+            document.getElementById('dashboardTab').classList.add('active');
+            document.querySelector('[data-tab="dashboard"]').classList.add('active');
+            loadTrackerData(false);
+            renderDashboard(currentData);
         } else {
             document.body.classList.remove('form-view');
             document.getElementById('trackerTab').classList.add('active');
-            document.querySelector('.tab-btn:last-child').classList.add('active');
+            document.querySelector('[data-tab="tracker"]').classList.add('active');
             loadTrackerData(false);
         }
     }
@@ -1339,7 +1421,62 @@
     }
 
     // ─── LOAD DATA ────────────────────────────────────────────────
-    async function loadTrackerData(forceRefresh = false) {
+    function readTrackerCache() {
+        try {
+            const cached = JSON.parse(localStorage.getItem(TRACKER_CACHE_KEY) || 'null');
+            if (!cached || !Array.isArray(cached.headers) || !Array.isArray(cached.data)) return null;
+            return cached;
+        } catch (error) {
+            localStorage.removeItem(TRACKER_CACHE_KEY);
+            return null;
+        }
+    }
+
+    function writeTrackerCache(headers, data) {
+        try {
+            localStorage.setItem(TRACKER_CACHE_KEY, JSON.stringify({
+                headers,
+                data,
+                savedAt: Date.now()
+            }));
+        } catch (error) {
+            console.warn('Tracker cache save failed:', error);
+        }
+    }
+
+    function applyTrackerData(headers, data) {
+        currentHeaders = headers || [];
+        currentData = data || [];
+        if (currentHeaders.length) generateInvoiceNo();
+        renderDashboard(currentData);
+    }
+
+    async function refreshTrackerDataInBackground(renderAfterRefresh = true) {
+        if (isTrackerRefreshInProgress) return;
+        isTrackerRefreshInProgress = true;
+        try {
+            const response = await fetch(`${APPS_SCRIPT_URL}?action=getData&t=${Date.now()}`);
+            const result = await response.json();
+            if (result.success && result.data) {
+                applyTrackerData(result.headers, result.data);
+                writeTrackerCache(result.headers, result.data);
+                if (renderAfterRefresh) {
+                    const term = document.getElementById('searchInput').value.toLowerCase();
+                    const statusF = document.getElementById('statusFilter').value;
+                    const monthF = document.getElementById('mainMonthFilter').value;
+                    renderTable(term, statusF, monthF);
+                }
+            }
+        } catch (error) {
+            if (!currentData.length) {
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" style="text-align:center;">Connection error</td></tr>';
+            }
+        } finally {
+            isTrackerRefreshInProgress = false;
+        }
+    }
+
+    async function loadTrackerDataLegacy(forceRefresh = false) {
         const term    = document.getElementById('searchInput').value.toLowerCase();
         const statusF = document.getElementById('statusFilter').value;
         const monthF  = document.getElementById('mainMonthFilter').value;
@@ -1359,6 +1496,26 @@
             }
         }
         renderTable(term, statusF, monthF);
+    }
+
+    async function loadTrackerData(forceRefresh = false) {
+        const term = document.getElementById('searchInput').value.toLowerCase();
+        const statusF = document.getElementById('statusFilter').value;
+        const monthF = document.getElementById('mainMonthFilter').value;
+
+        if (!currentData.length) {
+            const cached = readTrackerCache();
+            if (cached) applyTrackerData(cached.headers, cached.data);
+        }
+
+        if (currentData.length) {
+            renderTable(term, statusF, monthF);
+            if (forceRefresh) refreshTrackerDataInBackground(true);
+            return;
+        }
+
+        document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Loading Data...</td></tr>';
+        await refreshTrackerDataInBackground(true);
     }
 
     // ─── RENDER TABLE ─────────────────────────────────────────────
@@ -1394,6 +1551,9 @@
         filtered.forEach(row => {
             const originalIdx = currentData.indexOf(row);
             const contactText = showSheetText(row[idxContact]).trim() || '-';
+            const callPhone = normalizeWhatsAppPhone(contactText);
+            const callButtonHtml = callPhone ?
+                `<a class="action-btn btn-call" href="tel:+${callPhone}" title="Call ${escapeHtml(formatWhatsAppPhone(callPhone))}"><i class="fas fa-phone-alt"></i></a>` : '';
             const contactHtml = contactText !== '-' ?
                 `<button type="button" class="contact-ledger-link" onclick="openContactLedger(${originalIdx})" title="View full ledger">${escapeHtml(contactText)}</button>` : '-';
             let statusVal  = row[idxStatus]?.toString().toUpperCase() || 'PENDING';
@@ -1419,9 +1579,10 @@
                 <td data-label="UTR">${row[idxUtr] || '-'}</td>
                 <td data-label="Actions">
                     <div class="action-icons">
+                        ${callButtonHtml}
                         <button type="button" class="action-btn btn-whatsapp" onclick="openQRAndShare(${originalIdx})" title="Share on WhatsApp"><i class="fab fa-whatsapp"></i></button>
                         ${reminderButtonHtml}
-                        <button type="button" class="action-btn btn-print"    onclick="openPrintChoice(${originalIdx})" title="Print Invoice / Challan"><i class="fas fa-print"></i></button>
+                        <button type="button" class="action-btn btn-print"    onclick="openPrintChoice(${originalIdx})" title="Print Invoice"><i class="fas fa-print"></i></button>
                         <button type="button" class="action-btn btn-edit"     onclick="openFullEditModal(${originalIdx})" title="Full Edit"><i class="fas fa-edit"></i></button>
                         <button type="button" class="action-btn btn-config"   onclick="openPaymentModal(${originalIdx})" title="Quick Update"><i class="fas fa-sliders-h"></i></button>
                         <button type="button" class="action-btn btn-delete"   onclick="deleteRecord(${originalIdx})" title="Delete"><i class="fas fa-trash-alt"></i></button>
@@ -1430,6 +1591,117 @@
             </tr>`;
         });
         document.getElementById('tableBody').innerHTML = html;
+    }
+
+    function formatMoney(value) {
+        return 'Rs. ' + (parseFloat(value) || 0).toLocaleString('en-IN');
+    }
+
+    function renderBarRows(items, maxValue, className = '') {
+        if (!items.length) return '<div class="empty-analytics">No data available</div>';
+        return items.map(item => {
+            const pct = maxValue > 0 ? Math.max((item.value / maxValue) * 100, 3) : 0;
+            return `
+                <div class="chart-row">
+                    <div>${escapeHtml(item.label)}</div>
+                    <div class="chart-track"><div class="chart-fill ${className}" style="width:${pct}%;"></div></div>
+                    <div class="chart-value">${escapeHtml(item.display)}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderDashboard(data = currentData) {
+        const summaryEl = document.getElementById('dashboardSummary');
+        if (!summaryEl || !currentHeaders.length) return;
+
+        const idxStatus = getColIndex('PAYMENT STATUS');
+        const idxDate = getColIndex('DATE');
+        const idxPurpose = getColIndex('PURPOSE');
+        const idxDealing = getColIndex('DEALING AMOUNT');
+        const idxRecv = getColIndex('RECEIVED AMOUNT');
+        const idxSetup = getColIndex('UPLOADING OR SETUP AMOUNT');
+        const idxIdAct = getColIndex('ID ACTIVATION AMOUNT');
+
+        const statusMap = { SUCCESS: { count: 0, amount: 0 }, PENDING: { count: 0, amount: 0 }, PARTIAL: { count: 0, amount: 0 }, FAILED: { count: 0, amount: 0 }, REFUND: { count: 0, amount: 0 }, ADVANCE: { count: 0, amount: 0 } };
+        const purposeMap = {};
+        const monthMap = {};
+        let totalDeal = 0, totalReceived = 0, totalDue = 0, totalSetup = 0, totalId = 0;
+
+        data.forEach(row => {
+            const status = (idxStatus !== -1 ? row[idxStatus] : 'PENDING')?.toString().toUpperCase() || 'PENDING';
+            const deal = idxDealing !== -1 ? (parseFloat(row[idxDealing]) || 0) : 0;
+            const recv = idxRecv !== -1 ? (parseFloat(row[idxRecv]) || 0) : 0;
+            const setup = idxSetup !== -1 ? (parseFloat(row[idxSetup]) || 0) : 0;
+            const idAct = idxIdAct !== -1 ? (parseFloat(row[idxIdAct]) || 0) : 0;
+            const due = Math.max(deal - recv, 0);
+
+            if (!statusMap[status]) statusMap[status] = { count: 0, amount: 0 };
+            statusMap[status].count++;
+            statusMap[status].amount += status === 'PENDING' ? deal : recv;
+            totalDeal += deal;
+            totalReceived += recv;
+            totalDue += due;
+            totalSetup += setup;
+            totalId += idAct;
+
+            const purpose = idxPurpose !== -1 ? (row[idxPurpose] || 'Other').toString() : 'Other';
+            purpose.split(',').map(p => p.trim()).filter(Boolean).forEach(p => {
+                purposeMap[p] = (purposeMap[p] || 0) + 1;
+            });
+
+            const dStr = idxDate !== -1 ? getLocalISODate(row[idxDate]) : '';
+            if (dStr) {
+                const key = dStr.slice(0, 7);
+                monthMap[key] = (monthMap[key] || 0) + recv;
+            }
+        });
+
+        summaryEl.innerHTML = `
+            <div class="mini-kpi"><span>Total Records</span><strong>${data.length}</strong></div>
+            <div class="mini-kpi"><span>Dealing Amount</span><strong>${formatMoney(totalDeal)}</strong></div>
+            <div class="mini-kpi"><span>Received</span><strong>${formatMoney(totalReceived)}</strong></div>
+            <div class="mini-kpi"><span>Pending Due</span><strong style="color:#ee5d50;">${formatMoney(totalDue)}</strong></div>
+            <div class="mini-kpi"><span>ID Activation</span><strong style="color:#05cd99;">${formatMoney(totalId)}</strong></div>
+            <div class="mini-kpi"><span>Setup Amount</span><strong>${formatMoney(totalSetup)}</strong></div>
+        `;
+
+        const totalCount = data.length || 1;
+        const successDeg = (statusMap.SUCCESS.count / totalCount) * 360;
+        const pendingDeg = successDeg + (((statusMap.PENDING.count + statusMap.PARTIAL.count) / totalCount) * 360);
+        const failedDeg = pendingDeg + ((statusMap.FAILED.count / totalCount) * 360);
+        const donut = document.getElementById('statusDonut');
+        donut.style.setProperty('--successDeg', `${successDeg}deg`);
+        donut.style.setProperty('--pendingDeg', `${pendingDeg}deg`);
+        donut.style.setProperty('--failedDeg', `${failedDeg}deg`);
+        document.getElementById('donutTotal').innerText = data.length;
+        document.getElementById('statusLegend').innerHTML = [
+            ['#05cd99', 'Success', statusMap.SUCCESS.count, formatMoney(statusMap.SUCCESS.amount)],
+            ['#ff9800', 'Pending / Partial', statusMap.PENDING.count + statusMap.PARTIAL.count, formatMoney(statusMap.PENDING.amount + statusMap.PARTIAL.amount)],
+            ['#ee5d50', 'Failed', statusMap.FAILED.count, formatMoney(statusMap.FAILED.amount)],
+            ['#4318ff', 'Refund / Advance', statusMap.REFUND.count + statusMap.ADVANCE.count, formatMoney(statusMap.REFUND.amount + statusMap.ADVANCE.amount)]
+        ].map(item => `
+            <div class="legend-item"><span><i class="legend-dot" style="background:${item[0]};"></i>${item[1]}</span><strong>${item[2]} | ${item[3]}</strong></div>
+        `).join('');
+
+        const purposeItems = Object.entries(purposeMap)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8)
+            .map(([label, value]) => ({ label, value, display: String(value) }));
+        document.getElementById('purposeChart').innerHTML = renderBarRows(purposeItems, Math.max(0, ...purposeItems.map(i => i.value)), 'success');
+
+        const now = new Date();
+        const monthItems = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            monthItems.push({
+                label: d.toLocaleString('default', { month: 'short', year: '2-digit' }),
+                value: monthMap[key] || 0,
+                display: formatMoney(monthMap[key] || 0)
+            });
+        }
+        document.getElementById('monthlyChart').innerHTML = renderBarRows(monthItems, Math.max(0, ...monthItems.map(i => i.value)), 'pending');
     }
 
     // ─── UPDATED STATS WITH DUE TRACKER ───────────────────────────
