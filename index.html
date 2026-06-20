@@ -147,6 +147,7 @@
         .btn-delete { background: #ffe6e6; color: #ee5d50; }
         .btn-print { background: #f4f7fe; color: #1b2559; border: 1px solid #e0e5f2; }
         .btn-bell { background: #ffe6e6; color: #ee5d50; animation: pulse 2s infinite; }
+        .btn-sms { background: #eaf4ff; color: #0b7bd3; }
         .btn-call { background: #e6fcf5; color: #05a77d; text-decoration: none; }
         
         @keyframes pulse {
@@ -817,8 +818,8 @@
             <div class="wa-target-box">
                 <label><i class="fab fa-whatsapp"></i> Send WhatsApp To</label>
                 <div class="wa-target-options">
-                    <label><input type="radio" name="waTargetType" id="waTargetContact" value="contact" onchange="toggleWhatsAppTargetInput()"> <span id="waTargetContactText">Saved contact</span></label>
-                    <label><input type="radio" name="waTargetType" id="waTargetCustom" value="custom" onchange="toggleWhatsAppTargetInput()"> Other number</label>
+                    <label onclick="if(!document.getElementById('waTargetContact').disabled){ document.getElementById('waTargetContact').checked = true; handleWhatsAppTargetChange(); openSavedContactWhatsApp(); }"><input type="radio" name="waTargetType" id="waTargetContact" value="contact" onchange="handleWhatsAppTargetChange()"> <span id="waTargetContactText">Saved contact</span></label>
+                    <label><input type="radio" name="waTargetType" id="waTargetCustom" value="custom" onchange="handleWhatsAppTargetChange()"> Other number</label>
                 </div>
                 <input type="tel" id="waCustomPhone" placeholder="Enter WhatsApp number">
             </div>
@@ -1191,6 +1192,46 @@
     function sendWhatsAppReminder(rowIndex) {
         openQRAndShare(rowIndex, 'reminder');
     }
+    function buildPaymentReminderPayload(rowIndex) {
+        const record = currentData[rowIndex];
+        if (!record) return null;
+
+        const upiId = document.getElementById('globalUpiId').value.trim() || '9521867142-5@ybl';
+        const contactText = showSheetText(record[getColIndex('CONTACT NO. OR NAME')]).trim() || 'Customer';
+        const contactPhone = normalizeWhatsAppPhone(contactText);
+        const invoice = record[getColIndex('INVOICE NO.')] || 'INV';
+        const purpose = record[getColIndex('PURPOSE')] || 'Payment';
+        const totalDeal = parseFloat(record[getColIndex('DEALING AMOUNT')] || 0) || 0;
+        const receivedAmt = parseFloat(record[getColIndex('RECEIVED AMOUNT')] || 0) || 0;
+        const dueAmt = Math.max(totalDeal - receivedAmt, 0);
+        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=Arjun%20Malviya&am=${dueAmt.toFixed(2)}&cu=INR&tn=${encodeURIComponent('DUE-' + invoice)}&tr=${invoice}`;
+        return { upiId, contactText, contactPhone, invoice, purpose, totalDeal, receivedAmt, dueAmt, upiLink };
+    }
+    function buildSmsReminderMessage(payload) {
+        const bizName = localStorage.getItem('biz_name') || 'KRP ID Activation';
+        return `PAYMENT REMINDER\n\n` +
+            `${bizName}\n` +
+            `Invoice No: ${payload.invoice}\n` +
+            `Customer: ${payload.contactText}\n` +
+            `Work: ${payload.purpose}\n` +
+            `Total Deal Amt: Rs. ${payload.totalDeal.toLocaleString('en-IN')}\n` +
+            `Amount Paid: Rs. ${payload.receivedAmt.toLocaleString('en-IN')}\n` +
+            `BALANCE DUE: Rs. ${payload.dueAmt.toLocaleString('en-IN')}\n\n` +
+            `Payment Link:\n${payload.upiLink}\n\n` +
+            `Please clear the pending payment. Thank you.\n\n` +
+            `Arjun Malviya | 9521867142`;
+    }
+    function sendSmsReminder(rowIndex) {
+        const payload = buildPaymentReminderPayload(rowIndex);
+        if (!payload) return;
+        if (!payload.contactPhone) {
+            showMessage('Valid mobile number not found for SMS', 'error');
+            return;
+        }
+        const separator = /iPad|iPhone|iPod/i.test(navigator.userAgent) ? '&' : '?';
+        window.location.href = `sms:+${payload.contactPhone}${separator}body=${encodeURIComponent(buildSmsReminderMessage(payload))}`;
+        showMessage('SMS reminder ready', 'success');
+    }
 
     function toggleViewMode() {
         isMobileView = !isMobileView;
@@ -1289,6 +1330,9 @@
         if (!input) return;
         input.style.display = document.getElementById('waTargetCustom').checked ? 'block' : 'none';
     }
+    function handleWhatsAppTargetChange() {
+        toggleWhatsAppTargetInput();
+    }
 
     function openContactLedger(rowIndex) {
         const record = currentData[rowIndex];
@@ -1331,6 +1375,7 @@
         const rowsHtml = ledgerRows.map(item => {
             const row = item.row;
             const statusVal = (row[idxStatus]?.toString().toUpperCase() || 'PENDING');
+            const canSendReminder = statusVal === 'PENDING' || statusVal === 'PARTIAL';
             const badgeClass = statusVal === 'SUCCESS' ? 'badge-success' :
                                statusVal === 'FAILED'  ? 'badge-failed'  :
                                statusVal === 'REFUND'  ? 'badge-refund'  :
@@ -1358,6 +1403,7 @@
                     <div class="action-icons">
                         <button type="button" class="action-btn btn-edit" onclick="editLedgerRecord(${item.index})" title="Full Edit"><i class="fas fa-edit"></i></button>
                         <button type="button" class="action-btn btn-config" onclick="quickUpdateLedgerRecord(${item.index})" title="Quick Update"><i class="fas fa-sliders-h"></i></button>
+                        ${canSendReminder ? `<button type="button" class="action-btn btn-sms" onclick="sendSmsReminder(${item.index})" title="Send SMS Reminder"><i class="fas fa-sms"></i></button>` : ''}
                         <button type="button" class="action-btn btn-delete" onclick="deleteLedgerRecord(${item.index})" title="Delete"><i class="fas fa-trash-alt"></i></button>
                     </div>
                 </td>
@@ -1692,6 +1738,8 @@
             // Reminder Bell button visibility conditions
             let reminderButtonHtml = (statusVal === 'PENDING' || statusVal === 'PARTIAL') ? 
                 `<button type="button" class="action-btn btn-bell" onclick="sendWhatsAppReminder(${originalIdx})" title="Send WhatsApp Payment Reminder"><i class="fas fa-bell"></i></button>` : '';
+            let smsReminderButtonHtml = (statusVal === 'PENDING' || statusVal === 'PARTIAL') ?
+                `<button type="button" class="action-btn btn-sms" onclick="sendSmsReminder(${originalIdx})" title="Send SMS Payment Reminder"><i class="fas fa-sms"></i></button>` : '';
 
             html += `<tr>
                 <td data-label="Invoice"><strong>${row[idxInv] || '-'}</strong></td>
@@ -1707,6 +1755,7 @@
                         ${callButtonHtml}
                         <button type="button" class="action-btn btn-whatsapp" onclick="openQRAndShare(${originalIdx})" title="Share on WhatsApp"><i class="fab fa-whatsapp"></i></button>
                         ${reminderButtonHtml}
+                        ${smsReminderButtonHtml}
                         <button type="button" class="action-btn btn-print"    onclick="openPrintChoice(${originalIdx})" title="Print Invoice"><i class="fas fa-print"></i></button>
                         <button type="button" class="action-btn btn-edit"     onclick="openFullEditModal(${originalIdx})" title="Full Edit"><i class="fas fa-edit"></i></button>
                         <button type="button" class="action-btn btn-config"   onclick="openPaymentModal(${originalIdx})" title="Quick Update"><i class="fas fa-sliders-h"></i></button>
@@ -2133,6 +2182,37 @@
             `Please clear the pending payment by clicking the link or scanning the QR code.\n\n` +
             `Arjun Malviya | 9521867142`;
     }
+    function buildCurrentWhatsAppShareMessage() {
+        if (!currentQRPayload) return '';
+        const p = currentQRPayload;
+        const userRemarks = document.getElementById('whatsappRemarks').value.trim();
+        const remarksText = userRemarks ? `\nRemarks: ${userRemarks}` : '';
+        const messageText =
+            `*PAYMENT REQUEST*\n\n` +
+            `*KRP ID ACTIVATION*\n` +
+            `Customer: ${p.contactName}\n` +
+            `Amount: Rs. ${parseFloat(p.dealingAmt).toLocaleString('en-IN')}\n` +
+            `UPI ID: ${p.upiId}` +
+            `${remarksText}\n\n` +
+            `Direct Payment Link:\n${p.upiLink}\n\n` +
+            `Click the link OR scan QR code to pay instantly.\n\n` +
+            `Arjun Malviya | 9521867142`;
+        return buildQRWhatsAppMessage(p, messageText);
+    }
+    function openWhatsAppMessage(messageText, phone = '') {
+        const phoneParam = phone ? `phone=${encodeURIComponent(phone)}&` : '';
+        window.open(`https://api.whatsapp.com/send?${phoneParam}text=${encodeURIComponent(messageText)}`, '_blank');
+    }
+    function openSavedContactWhatsApp() {
+        if (!currentQRPayload) return;
+        const phone = normalizeWhatsAppPhone(currentQRPayload.contactPhone || '');
+        if (!phone) {
+            showMessage('Saved contact number not found', 'error');
+            return;
+        }
+        openWhatsAppMessage(buildCurrentWhatsAppShareMessage(), phone);
+        showMessage('Opening saved contact on WhatsApp', 'success');
+    }
 
     function shareQRWithWhatsApp() {
         if (!currentQRPayload) return;
@@ -2151,12 +2231,8 @@
             `✅ Click the link OR scan QR code to pay instantly.\n\n` +
             `📞 Arjun Malviya | 9521867142`;
 
-        const shareMessageText = buildQRWhatsAppMessage(p, messageText);
+        const shareMessageText = buildCurrentWhatsAppShareMessage() || buildQRWhatsAppMessage(p, messageText);
         const selectedPhone = getSelectedWhatsAppPhone();
-        if (document.getElementById('waTargetCustom').checked && !selectedPhone) {
-            showMessage('Please enter a valid WhatsApp number', 'error');
-            return;
-        }
 
         let dataUrl = '';
         const img = document.querySelector('#qrCodeContainer img');
