@@ -178,6 +178,7 @@
         /* Modals */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 20, 55, 0.8); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 15px; overflow-y: auto; }
         .modal-overlay.active { display: flex; }
+        #fullEditModal.active, #paymentModal.active { z-index: 2100; }
         .modal-content { background: white; padding: 20px; border-radius: 24px; width: 100%; max-width: 400px; }
         .modal-content.large-modal { max-width: 900px; margin: auto; border-radius: 15px; }
         .modal-header { font-size: 18px; font-weight: 700; color: #1b2559; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0e5f2; padding-bottom: 12px; }
@@ -194,6 +195,7 @@
         .ledger-table-wrapper { border: 1px solid #e0e5f2; border-radius: 10px; max-height: 55vh; overflow: auto; }
         .ledger-table th, .ledger-table td { white-space: nowrap; }
         .ledger-table .ledger-purpose, .ledger-table .ledger-remarks { min-width: 180px; white-space: normal; }
+        .ledger-table .ledger-actions { min-width: 135px; }
         .ledger-due.positive { color: #ee5d50; font-weight: 800; }
 
         .qr-preview-box { background: #ffffff; padding: 15px; border-radius: 20px; margin: 10px 0; }
@@ -784,11 +786,11 @@
                 <thead>
                     <tr>
                         <th>Date</th><th>Invoice</th><th>Status</th><th>Purpose</th>
-                        <th>Deal</th><th>Received</th><th>Balance</th><th>UTR</th><th>Remarks</th>
+                        <th>Deal</th><th>Received</th><th>Balance</th><th>UTR</th><th>Remarks</th><th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="ledgerTableBody">
-                    <tr><td colspan="9" style="text-align:center; padding:20px;">No ledger selected</td></tr>
+                    <tr><td colspan="10" style="text-align:center; padding:20px;">No ledger selected</td></tr>
                 </tbody>
             </table>
         </div>
@@ -968,6 +970,8 @@
     let currentQRCanvas = null;
     let selectedRowForPrint = null;
     let isTrackerRefreshInProgress = false;
+    let activeLedgerKey = '';
+    let activeLedgerTitle = '';
 
     // ─── INIT ─────────────────────────────────────────────────────
     function getLocalISODate(dateObj) {
@@ -1291,6 +1295,20 @@
         const contactKey = normalizeContactLedgerKey(record[idxContact]);
         if (!contactKey) return;
 
+        activeLedgerKey = contactKey;
+        activeLedgerTitle = contactText;
+        renderContactLedger(contactKey, contactText);
+    }
+    function refreshActiveContactLedger() {
+        const modal = document.getElementById('contactLedgerModal');
+        if (activeLedgerKey && modal?.classList.contains('active')) {
+            renderContactLedger(activeLedgerKey, activeLedgerTitle);
+        }
+    }
+    function renderContactLedger(contactKey, contactText = activeLedgerTitle) {
+        const idxContact = getColIndex('CONTACT NO. OR NAME');
+        if (idxContact === -1 || !contactKey) return;
+
         const idxInv     = getColIndex('INVOICE NO.');
         const idxDate    = getColIndex('DATE');
         const idxStatus  = getColIndex('PAYMENT STATUS');
@@ -1330,6 +1348,13 @@
                 <td class="ledger-due ${balance > 0 ? 'positive' : ''}">${formatLedgerMoney(balance)}</td>
                 <td>${escapeHtml(row[idxUtr] || '-')}</td>
                 <td class="ledger-remarks">${escapeHtml(row[idxRemarks] || '-')}</td>
+                <td class="ledger-actions">
+                    <div class="action-icons">
+                        <button type="button" class="action-btn btn-edit" onclick="editLedgerRecord(${item.index})" title="Full Edit"><i class="fas fa-edit"></i></button>
+                        <button type="button" class="action-btn btn-config" onclick="quickUpdateLedgerRecord(${item.index})" title="Quick Update"><i class="fas fa-sliders-h"></i></button>
+                        <button type="button" class="action-btn btn-delete" onclick="deleteLedgerRecord(${item.index})" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </td>
             </tr>`;
         }).join('');
 
@@ -1340,11 +1365,22 @@
             <div class="ledger-summary-item"><span>Total Received</span><strong>${formatLedgerMoney(totalReceived)}</strong></div>
             <div class="ledger-summary-item balance"><span>Balance</span><strong>${formatLedgerMoney(totalBalance)}</strong></div>
         `;
-        document.getElementById('ledgerTableBody').innerHTML = rowsHtml || '<tr><td colspan="9" style="text-align:center; padding:20px;">No records found</td></tr>';
+        document.getElementById('ledgerTableBody').innerHTML = rowsHtml || '<tr><td colspan="10" style="text-align:center; padding:20px;">No records found</td></tr>';
         document.getElementById('contactLedgerModal').classList.add('active');
     }
     function closeContactLedger() {
         document.getElementById('contactLedgerModal').classList.remove('active');
+        activeLedgerKey = '';
+        activeLedgerTitle = '';
+    }
+    function editLedgerRecord(rowIndex) {
+        openFullEditModal(rowIndex);
+    }
+    function quickUpdateLedgerRecord(rowIndex) {
+        openPaymentModal(rowIndex);
+    }
+    async function deleteLedgerRecord(rowIndex) {
+        await deleteRecord(rowIndex);
     }
 
     function generateInvoiceNo() {
@@ -1524,6 +1560,7 @@
         populatePurposeYears();
         if (currentHeaders.length) generateInvoiceNo();
         renderDashboard(currentData);
+        refreshActiveContactLedger();
     }
 
     async function refreshTrackerDataInBackground(renderAfterRefresh = true) {
@@ -2189,7 +2226,10 @@
             showMessage('Deleting...', 'pending');
             const response = await fetch(`${APPS_SCRIPT_URL}?action=delete&row=${rowIndex}&t=${Date.now()}`);
             const result   = await response.json();
-            if (result.success) { showMessage('Deleted successfully', 'success'); loadTrackerData(true); }
+            if (result.success) {
+                showMessage('Deleted successfully', 'success');
+                loadTrackerData(true);
+            }
             else showMessage(result.message || 'Delete failed', 'error');
         } catch (e) { showMessage('Network error', 'error'); }
     }
