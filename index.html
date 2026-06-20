@@ -829,7 +829,7 @@
 <div id="settingsModal" class="modal-overlay">
     <div class="modal-content" style="max-width: 500px;">
         <div class="modal-header">
-            <span><i class="fas fa-sliders-h"></i> Business Settings (Vyapar Options)</span>
+            <span><i class="fas fa-sliders-h"></i> Business Settings </span>
             <i class="fas fa-times close-modal" onclick="closeSettingsModal()"></i>
         </div>
         <form onsubmit="saveBusinessSettings(event)">
@@ -971,9 +971,35 @@
 
     // ─── INIT ─────────────────────────────────────────────────────
     function getLocalISODate(dateObj) {
-        if (!dateObj || isNaN(new Date(dateObj))) return '';
-        const d = new Date(dateObj);
+        if (!dateObj) return '';
+        let d = null;
+        if (dateObj instanceof Date) {
+            d = dateObj;
+        } else if (typeof dateObj === 'number') {
+            d = dateObj > 100000000000 ? new Date(dateObj) : new Date(Math.round((dateObj - 25569) * 86400 * 1000));
+        } else {
+            const text = dateObj.toString().trim();
+            let match = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+            if (match) {
+                d = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+            } else {
+                match = text.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
+                if (match) {
+                    const year = Number(match[3].length === 2 ? '20' + match[3] : match[3]);
+                    d = new Date(year, Number(match[2]) - 1, Number(match[1]));
+                } else {
+                    d = new Date(text);
+                }
+            }
+        }
+        if (!d || isNaN(d)) return '';
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function formatDisplayDate(dateObj) {
+        const isoDate = getLocalISODate(dateObj);
+        if (!isoDate) return '';
+        const [year, month, day] = isoDate.split('-');
+        return `${day}-${month}-${year}`;
     }
 
     window.onload = function() {
@@ -1224,17 +1250,21 @@
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         }[ch]));
     }
+    function normalizeMobile10(value) {
+        const digits = showSheetText(value).replace(/\D/g, '');
+        if (digits.length >= 10) return digits.slice(-10);
+        return '';
+    }
     function normalizeContactLedgerKey(value) {
-        return showSheetText(value).trim().replace(/\s+/g, ' ').toLowerCase();
+        const mobile = normalizeMobile10(value);
+        return mobile || showSheetText(value).trim().replace(/\s+/g, ' ').toLowerCase();
     }
     function formatLedgerMoney(value) {
         return 'Rs. ' + (parseFloat(value) || 0).toLocaleString('en-IN');
     }
     function normalizeWhatsAppPhone(value) {
-        let digits = (value || '').toString().replace(/\D/g, '');
-        if (digits.length === 10) digits = '91' + digits;
-        if (digits.length > 12 && digits.startsWith('91')) digits = digits.slice(0, 12);
-        return digits.length >= 11 ? digits : '';
+        const mobile = normalizeMobile10(value);
+        return mobile ? '91' + mobile : '';
     }
     function formatWhatsAppPhone(value) {
         const digits = normalizeWhatsAppPhone(value);
@@ -1291,7 +1321,7 @@
             totalBalance += balance;
 
             return `<tr>
-                <td>${escapeHtml(getLocalISODate(row[idxDate]) || '-')}</td>
+                <td>${escapeHtml(formatDisplayDate(row[idxDate]) || '-')}</td>
                 <td><strong>${escapeHtml(row[idxInv] || '-')}</strong></td>
                 <td><span class="badge ${badgeClass}">${escapeHtml(statusVal)}</span></td>
                 <td class="ledger-purpose">${escapeHtml(row[idxPurpose] || '-')}</td>
@@ -1396,9 +1426,9 @@
         const dropdown = document.getElementById(fieldId + '-dropdown');
         const yearSelectId = fieldId === 'purpose' ? 'purposeYear' : fieldId === 'edit_purpose' ? 'editPurposeYear' : null;
         const yearSelect = yearSelectId ? document.getElementById(yearSelectId) : null;
-        const selectedYear = values.find(v => /^YEAR\s+(\d{2}-\d{2}|\d{4})$/i.test(v));
+        const selectedYear = values.find(v => isPurposeYearToken(v));
         dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = values.includes(cb.value); });
-        if (yearSelect) yearSelect.value = selectedYear ? selectedYear.replace(/^YEAR\s+/i, '') : '';
+        if (yearSelect) yearSelect.value = selectedYear ? normalizePurposeYearValue(selectedYear) : '';
         const display = document.getElementById(fieldId + '-display');
         document.getElementById(fieldId).value = values.join(', ');
         if (values.length > 0) { display.textContent = values.join(', '); display.classList.add('has-value'); }
@@ -1406,17 +1436,61 @@
     }
     function resetNewFormMultiSelect() { setMultiSelectState('purpose', ''); setMultiSelectState('serviceRemarks', ''); }
 
+    function getFinancialYearStart(date = new Date()) {
+        return date.getMonth() >= 3 ? date.getFullYear() : date.getFullYear() - 1;
+    }
+    function formatFinancialYear(year) {
+        return `${String(year).slice(-2)}-${String(year + 1).slice(-2)}`;
+    }
+    function getFinancialYearSortValue(fy) {
+        const match = (fy || '').toString().match(/^(\d{2})-(\d{2})$/);
+        if (!match) return 0;
+        const currentCentury = Math.floor(getFinancialYearStart() / 100) * 100;
+        let start = currentCentury + parseInt(match[1], 10);
+        if (start > getFinancialYearStart() + 50) start -= 100;
+        return start;
+    }
+    function normalizePurposeYearValue(value) {
+        const match = (value || '').toString().trim().match(/^(?:YEAR|FY)?\s*-?\s*(\d{2,4})\s*-\s*(\d{2,4})$/i);
+        if (!match) return '';
+        return `${match[1].slice(-2)}-${match[2].slice(-2)}`;
+    }
+    function isPurposeYearToken(value) {
+        return !!normalizePurposeYearValue(value);
+    }
+    function getPurposeItemsForDashboard(value) {
+        const parts = (value || 'Other').toString().split(',').map(p => p.trim()).filter(Boolean);
+        const years = parts.filter(isPurposeYearToken).map(y => `YEAR ${normalizePurposeYearValue(y)}`);
+        const purposes = parts.filter(p => !isPurposeYearToken(p));
+        if (!purposes.length) return years.length ? years : ['Other'];
+        if (!years.length) return purposes;
+        return purposes.map(p => `${p}, ${years.join(', ')}`);
+    }
+
     function populatePurposeYears() {
-        const today = new Date();
-        const currentFyStart = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+        const currentFyStart = getFinancialYearStart();
+        const existingYears = new Set();
+        if (currentHeaders.length && currentData.length) {
+            const idxPurpose = getColIndex('PURPOSE');
+            if (idxPurpose !== -1) {
+                currentData.forEach(row => {
+                    (row[idxPurpose] || '').toString().split(',').forEach(part => {
+                        const year = normalizePurposeYearValue(part);
+                        if (year) existingYears.add(year);
+                    });
+                });
+            }
+        }
         ['purposeYear', 'editPurposeYear'].forEach(id => {
             const select = document.getElementById(id);
             if (!select) return;
-            select.innerHTML = '<option value="">Select Year</option>';
-            for (let year = currentFyStart - 3; year <= currentFyStart + 3; year++) {
-                const fy = `${String(year).slice(-2)}-${String(year + 1).slice(-2)}`;
-                select.innerHTML += `<option value="${fy}">${fy}</option>`;
-            }
+            const options = new Set(existingYears);
+            for (let year = currentFyStart - 10; year <= currentFyStart + 10; year++) options.add(formatFinancialYear(year));
+            select.innerHTML = '<option value="">Select Year</option>' +
+                Array.from(options)
+                    .sort((a, b) => getFinancialYearSortValue(b) - getFinancialYearSortValue(a))
+                    .map(fy => `<option value="${fy}">${fy}</option>`)
+                    .join('');
         });
     }
 
@@ -1447,6 +1521,7 @@
     function applyTrackerData(headers, data) {
         currentHeaders = headers || [];
         currentData = data || [];
+        populatePurposeYears();
         if (currentHeaders.length) generateInvoiceNo();
         renderDashboard(currentData);
     }
@@ -1540,6 +1615,13 @@
             return true;
         });
 
+        filtered.sort((a, b) => {
+            const dateA = idxDate !== -1 ? getLocalISODate(a[idxDate]) : '';
+            const dateB = idxDate !== -1 ? getLocalISODate(b[idxDate]) : '';
+            if (dateA !== dateB) return dateB.localeCompare(dateA);
+            return currentData.indexOf(b) - currentData.indexOf(a);
+        });
+
         updateStats(filtered);
 
         if (!filtered.length) {
@@ -1562,7 +1644,7 @@
                              statusVal === 'REFUND'  ? 'badge-refund'  :
                              statusVal === 'ADVANCE' ? 'badge-advance' : 
                              statusVal === 'PARTIAL' ? 'badge-partial' : 'badge-pending';
-            let dateDisplay = getLocalISODate(row[idxDate]);
+            let dateDisplay = formatDisplayDate(row[idxDate]);
 
             // Reminder Bell button visibility conditions
             let reminderButtonHtml = (statusVal === 'PENDING' || statusVal === 'PARTIAL') ? 
@@ -1646,7 +1728,7 @@
             totalId += idAct;
 
             const purpose = idxPurpose !== -1 ? (row[idxPurpose] || 'Other').toString() : 'Other';
-            purpose.split(',').map(p => p.trim()).filter(Boolean).forEach(p => {
+            getPurposeItemsForDashboard(purpose).forEach(p => {
                 purposeMap[p] = (purposeMap[p] || 0) + 1;
             });
 
