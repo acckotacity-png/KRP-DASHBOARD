@@ -531,6 +531,10 @@
                     <div id="purposeChart"></div>
                 </div>
                 <div class="analytics-panel wide">
+                    <div class="analytics-title"><i class="fas fa-building-columns"></i> Bank Wise Amount</div>
+                    <div id="bankChart"></div>
+                </div>
+                <div class="analytics-panel wide">
                     <div class="analytics-title"><i class="fas fa-chart-column"></i> Last 6 Months Amount</div>
                     <div id="monthlyChart"></div>
                 </div>
@@ -785,12 +789,12 @@
             <table class="ledger-table">
                 <thead>
                     <tr>
-                        <th>Date</th><th>Invoice</th><th>Status</th><th>Purpose</th>
+                        <th>Date</th><th>Invoice</th><th>Status</th><th>Purpose</th><th>Service Remarks</th>
                         <th>Deal</th><th>Received</th><th>Balance</th><th>UTR</th><th>Remarks</th><th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="ledgerTableBody">
-                    <tr><td colspan="10" style="text-align:center; padding:20px;">No ledger selected</td></tr>
+                    <tr><td colspan="11" style="text-align:center; padding:20px;">No ledger selected</td></tr>
                 </tbody>
             </table>
         </div>
@@ -831,7 +835,7 @@
 <div id="settingsModal" class="modal-overlay">
     <div class="modal-content" style="max-width: 500px;">
         <div class="modal-header">
-            <span><i class="fas fa-sliders-h"></i> Business Settings </span>
+            <span><i class="fas fa-sliders-h"></i> Business Settings</span>
             <i class="fas fa-times close-modal" onclick="closeSettingsModal()"></i>
         </div>
         <form onsubmit="saveBusinessSettings(event)">
@@ -1313,6 +1317,7 @@
         const idxDate    = getColIndex('DATE');
         const idxStatus  = getColIndex('PAYMENT STATUS');
         const idxPurpose = getColIndex('PURPOSE');
+        const idxServiceRemarks = getColIndex('SERVICE CHARGE REMARKS');
         const idxDeal    = getColIndex('DEALING AMOUNT');
         const idxRecv    = getColIndex('RECEIVED AMOUNT');
         const idxUtr     = getColIndex('UTR / TRN NO.');
@@ -1343,6 +1348,7 @@
                 <td><strong>${escapeHtml(row[idxInv] || '-')}</strong></td>
                 <td><span class="badge ${badgeClass}">${escapeHtml(statusVal)}</span></td>
                 <td class="ledger-purpose">${escapeHtml(row[idxPurpose] || '-')}</td>
+                <td class="ledger-remarks">${escapeHtml(row[idxServiceRemarks] || '-')}</td>
                 <td>${formatLedgerMoney(deal)}</td>
                 <td>${formatLedgerMoney(received)}</td>
                 <td class="ledger-due ${balance > 0 ? 'positive' : ''}">${formatLedgerMoney(balance)}</td>
@@ -1365,7 +1371,7 @@
             <div class="ledger-summary-item"><span>Total Received</span><strong>${formatLedgerMoney(totalReceived)}</strong></div>
             <div class="ledger-summary-item balance"><span>Balance</span><strong>${formatLedgerMoney(totalBalance)}</strong></div>
         `;
-        document.getElementById('ledgerTableBody').innerHTML = rowsHtml || '<tr><td colspan="10" style="text-align:center; padding:20px;">No records found</td></tr>';
+        document.getElementById('ledgerTableBody').innerHTML = rowsHtml || '<tr><td colspan="11" style="text-align:center; padding:20px;">No records found</td></tr>';
         document.getElementById('contactLedgerModal').classList.add('active');
     }
     function closeContactLedger() {
@@ -1739,11 +1745,13 @@
         const idxPurpose = getColIndex('PURPOSE');
         const idxDealing = getColIndex('DEALING AMOUNT');
         const idxRecv = getColIndex('RECEIVED AMOUNT');
+        const idxBank = getColIndex('BANK OWNER NAME');
         const idxSetup = getColIndex('UPLOADING OR SETUP AMOUNT');
         const idxIdAct = getColIndex('ID ACTIVATION AMOUNT');
 
         const statusMap = { SUCCESS: { count: 0, amount: 0 }, PENDING: { count: 0, amount: 0 }, PARTIAL: { count: 0, amount: 0 }, FAILED: { count: 0, amount: 0 }, REFUND: { count: 0, amount: 0 }, ADVANCE: { count: 0, amount: 0 } };
         const purposeMap = {};
+        const bankMap = {};
         const monthMap = {};
         let totalDeal = 0, totalReceived = 0, totalDue = 0, totalSetup = 0, totalId = 0;
 
@@ -1763,6 +1771,10 @@
             totalDue += due;
             totalSetup += setup;
             totalId += idAct;
+
+            const bankName = idxBank !== -1 ? (row[idxBank] || '').toString().trim() : '';
+            const bankKey = bankName || 'Unknown Bank';
+            bankMap[bankKey] = (bankMap[bankKey] || 0) + recv;
 
             const purpose = idxPurpose !== -1 ? (row[idxPurpose] || 'Other').toString() : 'Other';
             getPurposeItemsForDashboard(purpose).forEach(p => {
@@ -1808,6 +1820,13 @@
             .slice(0, 8)
             .map(([label, value]) => ({ label, value, display: String(value) }));
         document.getElementById('purposeChart').innerHTML = renderBarRows(purposeItems, Math.max(0, ...purposeItems.map(i => i.value)), 'success');
+
+        const bankItems = Object.entries(bankMap)
+            .filter(([, value]) => value > 0)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([label, value]) => ({ label, value, display: formatMoney(value) }));
+        document.getElementById('bankChart').innerHTML = renderBarRows(bankItems, Math.max(0, ...bankItems.map(i => i.value)), 'pending');
 
         const now = new Date();
         const monthItems = [];
