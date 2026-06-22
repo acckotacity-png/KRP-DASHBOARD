@@ -65,6 +65,21 @@
         .legend-item span:first-child { display: flex; align-items: center; gap: 8px; }
         .legend-dot { width: 10px; height: 10px; border-radius: 50%; background: #4318ff; flex: 0 0 auto; }
         .empty-analytics { color: #a3aed1; font-size: 13px; text-align: center; padding: 30px 10px; }
+        .records-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .records-summary-card { background: #f8fbff; border: 1px solid #e0e5f2; border-radius: 12px; padding: 12px; }
+        .records-summary-card span { display: block; color: #a3aed1; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+        .records-summary-card strong { color: #1b2559; font-size: 18px; }
+        .records-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        .records-cell-input { width: 100%; min-width: 92px; padding: 8px 9px; border: 1px solid #d8deef; border-radius: 8px; background: #fff; color: #1b2559; font-size: 12px; outline: none; }
+        .records-cell-input[readonly] { background: #f4f7fe; color: #6b7280; cursor: not-allowed; }
+        .records-cell-input:focus { border-color: #4318ff; box-shadow: 0 0 0 2px rgba(67,24,255,0.1); }
+        .records-textarea { min-height: 54px; resize: vertical; }
+        .records-row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .records-action-btn { border: none; border-radius: 8px; padding: 7px 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
+        .records-action-btn.update { background: #e6f2ff; color: #4318ff; }
+        .records-action-btn.delete { background: #ffe6e6; color: #ee5d50; }
+        .records-action-btn.add { background: #e6fcf5; color: #05cd99; }
+        .records-note { font-size: 11px; color: #7b85a8; margin-top: 8px; line-height: 1.4; }
         
         /* Tabs */
         .nav-tabs { display: flex; background: white; border-radius: 30px; padding: 5px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); }
@@ -513,6 +528,7 @@
     <div class="nav-tabs">
         <button class="tab-btn active" data-tab="form" onclick="switchTab('form')"><i class="fas fa-pen"></i> Data Entry</button>
         <button class="tab-btn" data-tab="tracker" onclick="switchTab('tracker')"><i class="fas fa-list-ul"></i> Data Tracker</button>
+        <button class="tab-btn" data-tab="records" onclick="switchTab('records')"><i class="fas fa-table"></i> Records Tracker</button>
         <button class="tab-btn" data-tab="dashboard" onclick="switchTab('dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</button>
     </div>
 
@@ -567,6 +583,123 @@
                     <div id="dailyChart"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div id="recordsTab" class="tab-content">
+        <div class="tracker-container">
+            <div class="section-title"><i class="fas fa-table"></i> Records Tracker</div>
+            <div class="records-toolbar">
+                <select id="recordsViewMode" class="filter-select" onchange="handleRecordsTrackerChange()">
+                    <option value="monthly">Monthly View</option>
+                    <option value="daily">Daily View</option>
+                </select>
+                <select id="recordsStatusFilter" class="filter-select" onchange="handleRecordsTrackerChange()">
+                    <option value="all">All Status</option>
+                    <option value="SUCCESS">Success</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="PARTIAL">Partial Paid</option>
+                    <option value="FAILED">Failed</option>
+                    <option value="REFUND">Refund</option>
+                    <option value="ADVANCE">Advance</option>
+                </select>
+                <select id="recordsMonthFilter" class="filter-select" onchange="handleRecordsTrackerChange()">
+                    <option value="all">All Months</option>
+                </select>
+                <select id="recordsDateFilterMode" class="filter-select" onchange="handleRecordsDateFilterChange()">
+                    <option value="all">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="datewise">Datewise</option>
+                </select>
+                <input type="date" id="recordsDateFilterValue" class="date-filter-input" onchange="handleRecordsTrackerChange()" title="Select exact date">
+                <button type="button" class="btn-outline" onclick="openAddRecordsModal()"><i class="fas fa-plus"></i> Add Record</button>
+                <button type="button" class="btn-outline" onclick="exportRecordsTrackerCsv()"><i class="fas fa-file-csv" style="color:#1d6f42;"></i> Download Summary</button>
+                <button type="button" class="btn-outline" onclick="resetRecordsTrackerFilters()"><i class="fas fa-undo"></i> Reset</button>
+            </div>
+            <div id="recordsSummaryCards" class="records-summary-grid"></div>
+            <div class="table-wrapper">
+                <table id="recordsTrackerTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th><th>Month</th><th>Total ID</th><th>Working Amount</th><th>Transfer Amt</th><th>Total Pending Amt</th><th>Remaining Amt</th><th>Monthly Amount</th><th>Other Data Setup &amp; Uploading</th><th>Transfer Date / Details</th><th>Remarks</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recordsTrackerBody">
+                        <tr><td colspan="12" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="addRecordsModal" class="modal-overlay">
+        <div class="modal-content large-modal" style="max-width:760px;">
+            <div class="modal-header">
+                <span><i class="fas fa-plus-circle"></i> Add Records Tracker Entry</span>
+                <span class="close-modal" onclick="closeAddRecordsModal()">×</span>
+            </div>
+            <form id="addRecordsForm" onsubmit="submitAddRecordsEntry(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="required">Date</label>
+                        <input type="date" id="add_record_date" required onchange="syncAddRecordMonth()">
+                    </div>
+                    <div class="form-group">
+                        <label>Month</label>
+                        <input type="text" id="add_record_month" placeholder="Aug-26">
+                    </div>
+                    <div class="form-group">
+                        <label class="required">Total ID</label>
+                        <input type="number" id="add_record_totalId" step="1" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="add_record_status">
+                            <option value="PENDING">Pending</option>
+                            <option value="SUCCESS">Success</option>
+                            <option value="PARTIAL">Partial Paid</option>
+                            <option value="FAILED">Failed</option>
+                            <option value="REFUND">Refund</option>
+                            <option value="ADVANCE">Advance</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="required">Working Amount</label>
+                        <input type="number" id="add_record_working" step="0.01" min="0" required oninput="calcAddRecordRemaining()">
+                    </div>
+                    <div class="form-group">
+                        <label class="required">Transfer Amt</label>
+                        <input type="number" id="add_record_transfer" step="0.01" min="0" required oninput="calcAddRecordRemaining()">
+                    </div>
+                    <div class="form-group">
+                        <label>Total Pending Amt</label>
+                        <input type="number" id="add_record_pending" step="0.01" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Remaining Amt</label>
+                        <input type="number" id="add_record_remaining" step="0.01" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label class="required">Monthly Amount</label>
+                        <input type="number" id="add_record_monthly" step="0.01" min="0" required oninput="calcAddRecordRemaining()">
+                    </div>
+                    <div class="form-group">
+                        <label class="required">Other Data Setup &amp; Uploading</label>
+                        <input type="number" id="add_record_setup" step="0.01" min="0" required oninput="calcAddRecordRemaining()">
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Transfer Date / Details</label>
+                        <textarea id="add_record_transferDetails" class="records-cell-input records-textarea" placeholder="01-06-26: ₹5000, 03-06-26: ₹2500"></textarea>
+                        <div class="records-note">Format: `DD-MM-YY: amount` or `date: amount`. Multiple partial transfers can be separated by comma.</div>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Remarks</label>
+                        <textarea id="add_record_remarks" class="records-cell-input records-textarea" placeholder="Any notes you want to keep..."></textarea>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit" style="max-width:none;"><i class="fas fa-save"></i> Save Record</button>
+            </form>
         </div>
     </div>
 
@@ -825,11 +958,11 @@
                 <thead>
                     <tr>
                         <th>Date</th><th>Invoice</th><th>Status</th><th>Purpose</th><th>Service Remarks</th>
-                        <th>Deal</th><th>Received</th><th>Balance</th><th>UTR</th><th>Remarks</th><th>Actions</th>
+                        <th>Login ID</th><th>Deal</th><th>Received</th><th>Balance</th><th>UTR</th><th>Remarks</th><th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="ledgerTableBody">
-                    <tr><td colspan="11" style="text-align:center; padding:20px;">No ledger selected</td></tr>
+                    <tr><td colspan="12" style="text-align:center; padding:20px;">No ledger selected</td></tr>
                 </tbody>
             </table>
         </div>
@@ -1003,6 +1136,9 @@
     // YAHAN APNA APPS SCRIPT URL ZAROOR PASTE KAREIN
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFrLTW2tMUueKM6z2bk_GzVf1SZp7AFPwdnsVY6jfIouGCJLh57E8mEgDUtTtFUcIM/exec';
     const TRACKER_CACHE_KEY = 'krp_tracker_data_cache_v1';
+    const RECORDS_TRACKER_DRAFT_KEY = 'krp_records_tracker_draft_v1';
+    const RECORDS_TRACKER_CUSTOM_KEY = 'krp_records_tracker_custom_v1';
+    const RECORDS_TRACKER_DELETED_KEY = 'krp_records_tracker_deleted_v1';
 
     let currentData = [], currentHeaders = [], isMobileView = false;
     let currentQRPayload = null;
@@ -1050,6 +1186,7 @@
         populateMonthsDropdown();
         initTrackerDateFilter();
         initDashboardFilters();
+        initRecordsTrackerFilters();
         populatePurposeYears();
         loadSavedBusinessSettings();
         wireContactAutofill();
@@ -1299,6 +1436,11 @@
             document.getElementById('dashboardTab').classList.add('active');
             document.querySelector('[data-tab="dashboard"]').classList.add('active');
             renderDashboard(getDashboardFilteredData());
+        } else if (tab === 'records') {
+            document.body.classList.remove('form-view');
+            document.getElementById('recordsTab').classList.add('active');
+            document.querySelector('[data-tab="records"]').classList.add('active');
+            renderRecordsTracker();
         } else {
             document.body.classList.remove('form-view');
             document.getElementById('trackerTab').classList.add('active');
@@ -1311,15 +1453,18 @@
     function populateMonthsDropdown() {
         const select = document.getElementById('mainMonthFilter');
         const dashboardSelect = document.getElementById('dashboardMonthFilter');
+        const recordsSelect = document.getElementById('recordsMonthFilter');
         const now = new Date();
         select.innerHTML = '<option value="all" selected>All Months</option>';
         if (dashboardSelect) dashboardSelect.innerHTML = '<option value="all" selected>All Months</option>';
+        if (recordsSelect) recordsSelect.innerHTML = '<option value="all" selected>All Months</option>';
         for (let i = 0; i < 6; i++) {
             let d = new Date(now.getFullYear(), now.getMonth() - i, 1);
             let val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
             let txt = d.toLocaleString('default', { month: 'long', year: 'numeric' });
             select.innerHTML += `<option value="${val}">${txt}</option>`;
             if (dashboardSelect) dashboardSelect.innerHTML += `<option value="${val}">${txt}</option>`;
+            if (recordsSelect) recordsSelect.innerHTML += `<option value="${val}">${txt}</option>`;
         }
     }
 
@@ -1390,6 +1535,48 @@
         if (value) value.value = getRelativeLocalISODate(0);
         updateDashboardDateFilterVisibility();
         renderDashboard(getDashboardFilteredData());
+    }
+
+    function initRecordsTrackerFilters() {
+        const mode = document.getElementById('recordsDateFilterMode');
+        const value = document.getElementById('recordsDateFilterValue');
+        if (!mode || !value) return;
+        value.value = getRelativeLocalISODate(0);
+        updateRecordsDateFilterVisibility();
+    }
+
+    function updateRecordsDateFilterVisibility() {
+        const mode = document.getElementById('recordsDateFilterMode')?.value || 'all';
+        const value = document.getElementById('recordsDateFilterValue');
+        if (!value) return;
+        value.style.display = mode === 'datewise' ? 'block' : 'none';
+        if (mode === 'today') value.value = getRelativeLocalISODate(0);
+        if (mode === 'yesterday') value.value = getRelativeLocalISODate(-1);
+        if (mode === 'datewise' && !value.value) value.value = getRelativeLocalISODate(0);
+    }
+
+    function handleRecordsDateFilterChange() {
+        updateRecordsDateFilterVisibility();
+        renderRecordsTracker();
+    }
+
+    function handleRecordsTrackerChange() {
+        renderRecordsTracker();
+    }
+
+    function resetRecordsTrackerFilters() {
+        const view = document.getElementById('recordsViewMode');
+        const status = document.getElementById('recordsStatusFilter');
+        const month = document.getElementById('recordsMonthFilter');
+        const mode = document.getElementById('recordsDateFilterMode');
+        const value = document.getElementById('recordsDateFilterValue');
+        if (view) view.value = 'monthly';
+        if (status) status.value = 'all';
+        if (month) month.value = 'all';
+        if (mode) mode.value = 'all';
+        if (value) value.value = getRelativeLocalISODate(0);
+        updateRecordsDateFilterVisibility();
+        renderRecordsTracker();
     }
 
     // ─── HELPERS ──────────────────────────────────────────────────
@@ -1470,6 +1657,7 @@
         const idxStatus  = getColIndex('PAYMENT STATUS');
         const idxPurpose = getColIndex('PURPOSE');
         const idxServiceRemarks = getColIndex('SERVICE CHARGE REMARKS');
+        const idxLogin   = getColIndex('LOGIN ID');
         const idxDeal    = getColIndex('DEALING AMOUNT');
         const idxRecv    = getColIndex('RECEIVED AMOUNT');
         const idxUtr     = getColIndex('UTR / TRN NO.');
@@ -1502,6 +1690,7 @@
                 <td><span class="badge ${badgeClass}">${escapeHtml(statusVal)}</span></td>
                 <td class="ledger-purpose">${escapeHtml(row[idxPurpose] || '-')}</td>
                 <td class="ledger-remarks">${escapeHtml(row[idxServiceRemarks] || '-')}</td>
+                <td class="ledger-remarks">${escapeHtml(row[idxLogin] || '-')}</td>
                 <td>${formatLedgerMoney(deal)}</td>
                 <td>${formatLedgerMoney(received)}</td>
                 <td class="ledger-due ${balance > 0 ? 'positive' : ''}">${formatLedgerMoney(balance)}</td>
@@ -1525,7 +1714,7 @@
             <div class="ledger-summary-item"><span>Total Received</span><strong>${formatLedgerMoney(totalReceived)}</strong></div>
             <div class="ledger-summary-item balance"><span>Balance</span><strong>${formatLedgerMoney(totalBalance)}</strong></div>
         `;
-        document.getElementById('ledgerTableBody').innerHTML = rowsHtml || '<tr><td colspan="11" style="text-align:center; padding:20px;">No records found</td></tr>';
+        document.getElementById('ledgerTableBody').innerHTML = rowsHtml || '<tr><td colspan="12" style="text-align:center; padding:20px;">No records found</td></tr>';
         document.getElementById('contactLedgerModal').classList.add('active');
     }
     function closeContactLedger() {
@@ -1792,6 +1981,7 @@
         populatePurposeYears();
         if (currentHeaders.length) generateInvoiceNo();
         renderDashboard(getDashboardFilteredData());
+        if (document.getElementById('recordsTab')?.classList.contains('active')) renderRecordsTracker();
         refreshActiveContactLedger();
     }
 
@@ -2137,6 +2327,439 @@
     }
 
     // ─── UPDATED STATS WITH DUE TRACKER ───────────────────────────
+    function getRecordsTrackerFilters() {
+        return {
+            viewMode: document.getElementById('recordsViewMode')?.value || 'monthly',
+            statusF: document.getElementById('recordsStatusFilter')?.value || 'all',
+            monthF: document.getElementById('recordsMonthFilter')?.value || 'all',
+            dateMode: document.getElementById('recordsDateFilterMode')?.value || 'all',
+            dateValue: document.getElementById('recordsDateFilterValue')?.value || ''
+        };
+    }
+
+    function recordsDateMatches(row, idxDate, filters) {
+        if (idxDate === -1) return true;
+        const rowDate = getLocalISODate(row[idxDate]);
+        if (!rowDate) return false;
+        if (filters.dateMode === 'today' || filters.dateMode === 'yesterday' || filters.dateMode === 'datewise') {
+            const targetDate = filters.dateMode === 'today' ? getRelativeLocalISODate(0)
+                : filters.dateMode === 'yesterday' ? getRelativeLocalISODate(-1)
+                : filters.dateValue;
+            return targetDate ? rowDate === targetDate : false;
+        }
+        if (filters.monthF !== 'all') return rowDate.startsWith(filters.monthF);
+        return true;
+    }
+
+    function readRecordsTrackerDraft() {
+        try {
+            const draft = JSON.parse(localStorage.getItem(RECORDS_TRACKER_DRAFT_KEY) || '{}');
+            return draft && typeof draft === 'object' && !Array.isArray(draft) ? draft : {};
+        } catch (error) {
+            localStorage.removeItem(RECORDS_TRACKER_DRAFT_KEY);
+            return {};
+        }
+    }
+
+    function writeRecordsTrackerDraft(draft) {
+        try {
+            localStorage.setItem(RECORDS_TRACKER_DRAFT_KEY, JSON.stringify(draft || {}));
+        } catch (error) {
+            console.warn('Records tracker draft save failed:', error);
+        }
+    }
+
+    function normalizeRecordNumber(value) {
+        const num = parseFloat((value ?? '').toString().replace(/,/g, ''));
+        return Number.isFinite(num) ? num : 0;
+    }
+
+    function safeRecordsKey(value) {
+        return (value || '').toString().replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
+
+    function getRecordsRowDomId(rowKey, field) {
+        return `records_${safeRecordsKey(rowKey)}_${field}`;
+    }
+
+    function isCustomRecordsRowKey(rowKey) {
+        return (rowKey || '').toString().startsWith('custom:');
+    }
+
+    function getRecordsTrackerRowKey(row) {
+        return `${row.viewMode}:${row.key}`;
+    }
+
+    function buildRecordsTrackerRows() {
+        const filters = getRecordsTrackerFilters();
+        const customRows = readCustomRecordsTrackerRows();
+        const deletedRows = new Set(readDeletedRecordsTrackerRows());
+        if (!currentHeaders.length && !currentData.length && !customRows.length) return [];
+        const idxStatus = getColIndex('PAYMENT STATUS');
+        const idxDate = getColIndex('DATE');
+        const idxDeal = getColIndex('DEALING AMOUNT');
+        const idxRecv = getColIndex('RECEIVED AMOUNT');
+        const idxSetup = getColIndex('UPLOADING OR SETUP AMOUNT');
+        const idxIdAct = getColIndex('ID ACTIVATION AMOUNT');
+        const draft = readRecordsTrackerDraft();
+
+        const groups = new Map();
+        currentData.forEach(row => {
+            const rowKey = getRecordsTrackerRowKey({ viewMode: filters.viewMode, key: idxDate !== -1 ? (getLocalISODate(row[idxDate]) || '') : '' });
+            if (deletedRows.has(rowKey)) return;
+            if (filters.statusF !== 'all' && idxStatus !== -1 && (row[idxStatus]?.toString().toUpperCase() || '') !== filters.statusF) return;
+            if (!recordsDateMatches(row, idxDate, filters)) return;
+
+            const dStr = idxDate !== -1 ? getLocalISODate(row[idxDate]) : '';
+            if (!dStr) return;
+            const key = filters.viewMode === 'daily' ? dStr : dStr.slice(0, 7);
+            const deal = idxDeal !== -1 ? normalizeRecordNumber(row[idxDeal]) : 0;
+            const recv = idxRecv !== -1 ? normalizeRecordNumber(row[idxRecv]) : 0;
+            const setup = idxSetup !== -1 ? normalizeRecordNumber(row[idxSetup]) : 0;
+            const idAct = idxIdAct !== -1 ? normalizeRecordNumber(row[idxIdAct]) : 0;
+            const pending = Math.max(deal - recv, 0);
+            const groupKey = `${filters.viewMode}:${key}`;
+            if (deletedRows.has(groupKey)) return;
+            const existing = groups.get(groupKey) || {
+                rowKey: groupKey,
+                key,
+                date: dStr,
+                month: filters.viewMode === 'daily' ? (dStr ? new Date(dStr + 'T00:00:00').toLocaleString('default', { month: 'short', year: '2-digit' }) : '-') : key,
+                totalId: 0,
+                working: 0,
+                transfer: 0,
+                pending: 0,
+                monthly: 0,
+                setup: 0,
+                remarks: '',
+                transferDetails: '',
+                status: (idxStatus !== -1 ? (row[idxStatus] || 'PENDING').toString().toUpperCase() : 'PENDING')
+            };
+
+            existing.date = filters.viewMode === 'daily' ? dStr : `${key}-01`;
+            existing.month = filters.viewMode === 'daily'
+                ? (dStr ? new Date(dStr + 'T00:00:00').toLocaleString('default', { month: 'short', year: '2-digit' }) : '-')
+                : key;
+            existing.totalId += idAct > 0 ? 1 : 0;
+            existing.working += deal;
+            existing.transfer += recv;
+            existing.pending += pending;
+            existing.monthly += idAct;
+            existing.setup += setup;
+            groups.set(groupKey, existing);
+        });
+
+        const builtRows = Array.from(groups.values()).sort((a, b) => b.key.localeCompare(a.key)).map(item => {
+            const saved = draft[item.rowKey] || {};
+            const working = saved.working !== undefined ? normalizeRecordNumber(saved.working) : item.working;
+            const transfer = saved.transfer !== undefined ? normalizeRecordNumber(saved.transfer) : item.transfer;
+            const totalId = saved.totalId !== undefined ? normalizeRecordNumber(saved.totalId) : item.totalId;
+            const monthly = saved.monthly !== undefined ? normalizeRecordNumber(saved.monthly) : item.monthly;
+            const setup = saved.setup !== undefined ? normalizeRecordNumber(saved.setup) : item.setup;
+            const remarks = saved.remarks !== undefined ? saved.remarks : item.remarks || '';
+            const transferDetails = saved.transferDetails !== undefined ? saved.transferDetails : item.transferDetails || '';
+            const status = saved.status !== undefined ? saved.status : item.status || 'PENDING';
+            const date = saved.date || item.date;
+            const month = saved.month || item.month;
+            const pending = Math.max(working - transfer, 0);
+            const remaining = Math.max(pending - monthly - setup, 0);
+            return { ...item, date, month, totalId, working, transfer, monthly, setup, pending, remaining, remarks, transferDetails, status };
+        }).concat(customRows.filter(item => {
+            const keyMatch = item.rowKey || '';
+            if (deletedRows.has(keyMatch)) return false;
+            if (filters.statusF !== 'all' && (item.status || 'PENDING').toString().toUpperCase() !== filters.statusF) return false;
+            const tempDate = item.date || '';
+            const tempRow = [tempDate];
+            return recordsDateMatches(tempRow, 0, { ...filters, monthF: filters.monthF, dateMode: filters.dateMode, dateValue: filters.dateValue });
+        }).map((item, index) => {
+            const saved = draft[item.rowKey] || {};
+            const date = item.date || getLocalISODate(new Date());
+            const month = saved.month || item.month || (date ? new Date(date + 'T00:00:00').toLocaleString('default', { month: 'short', year: '2-digit' }) : '-');
+            const working = saved.working !== undefined ? normalizeRecordNumber(saved.working) : normalizeRecordNumber(item.working);
+            const transfer = saved.transfer !== undefined ? normalizeRecordNumber(saved.transfer) : normalizeRecordNumber(item.transfer);
+            const monthly = saved.monthly !== undefined ? normalizeRecordNumber(saved.monthly) : normalizeRecordNumber(item.monthly);
+            const setup = saved.setup !== undefined ? normalizeRecordNumber(saved.setup) : normalizeRecordNumber(item.setup);
+            const totalId = saved.totalId !== undefined ? normalizeRecordNumber(saved.totalId) : Math.max(parseInt(item.totalId || '0', 10) || 0, 0);
+            const remarks = saved.remarks !== undefined ? saved.remarks : (item.remarks || '');
+            const transferDetails = saved.transferDetails !== undefined ? saved.transferDetails : (item.transferDetails || '');
+            const status = (saved.status || item.status || 'PENDING').toString().toUpperCase();
+            const pending = Math.max(working - transfer, 0);
+            const remaining = Math.max(pending - monthly - setup, 0);
+            return {
+                rowKey: item.rowKey || `custom:${index}`,
+                key: date,
+                date,
+                month,
+                totalId,
+                working,
+                transfer,
+                pending,
+                monthly,
+                setup,
+                remaining,
+                remarks,
+                transferDetails,
+                status
+            };
+        }));
+
+        const orderedRows = builtRows.sort((a, b) => b.key.localeCompare(a.key));
+        let carryRemaining = 0;
+        return orderedRows.map(item => {
+            const working = normalizeRecordNumber(item.working);
+            const transfer = normalizeRecordNumber(item.transfer);
+            const monthly = normalizeRecordNumber(item.monthly);
+            const setup = normalizeRecordNumber(item.setup);
+            const pending = working + carryRemaining;
+            const remaining = Math.max(pending - transfer - monthly - setup, 0);
+            carryRemaining = remaining;
+            return { ...item, working, transfer, monthly, setup, pending, remaining };
+        });
+    }
+
+    function updateRecordsTrackerCell(rowKey, field, value) {
+        if (isCustomRecordsRowKey(rowKey)) {
+            const customRows = readCustomRecordsTrackerRows();
+            const idx = customRows.findIndex(item => item.rowKey === rowKey);
+            if (idx !== -1) {
+                customRows[idx] = { ...customRows[idx], [field]: value };
+                writeCustomRecordsTrackerRows(customRows);
+            }
+        } else {
+            const draft = readRecordsTrackerDraft();
+            const current = draft[rowKey] || {};
+            current[field] = value;
+            draft[rowKey] = current;
+            writeRecordsTrackerDraft(draft);
+        }
+        renderRecordsTracker();
+    }
+
+    function saveRecordsTrackerRow(rowKey) {
+        const current = {};
+        const fields = ['date', 'month', 'totalId', 'working', 'transfer', 'monthly', 'setup', 'transferDetails', 'remarks', 'status'];
+        fields.forEach(field => {
+            const el = document.getElementById(getRecordsRowDomId(rowKey, field));
+            if (!el) return;
+            current[field] = el.value;
+        });
+        if (isCustomRecordsRowKey(rowKey)) {
+            const customRows = readCustomRecordsTrackerRows();
+            const idx = customRows.findIndex(item => item.rowKey === rowKey);
+            if (idx !== -1) {
+                customRows[idx] = { ...customRows[idx], ...current };
+                writeCustomRecordsTrackerRows(customRows);
+            }
+        } else {
+            const draft = readRecordsTrackerDraft();
+            draft[rowKey] = current;
+            writeRecordsTrackerDraft(draft);
+        }
+        renderRecordsTracker();
+        showMessage('Record updated', 'success');
+    }
+
+    function deleteRecordsTrackerRow(rowKey) {
+        if (!confirm('Delete this record from Records Tracker?')) return;
+        const customRows = readCustomRecordsTrackerRows();
+        const customNext = customRows.filter(item => item.rowKey !== rowKey);
+        if (customNext.length !== customRows.length) {
+            writeCustomRecordsTrackerRows(customNext);
+        } else {
+            const deletedRows = new Set(readDeletedRecordsTrackerRows());
+            deletedRows.add(rowKey);
+            writeDeletedRecordsTrackerRows(Array.from(deletedRows));
+        }
+        const draft = readRecordsTrackerDraft();
+        delete draft[rowKey];
+        writeRecordsTrackerDraft(draft);
+        renderRecordsTracker();
+        showMessage('Record deleted', 'success');
+    }
+
+    function renderRecordsTracker() {
+        const body = document.getElementById('recordsTrackerBody');
+        const cards = document.getElementById('recordsSummaryCards');
+        if (!body || !cards) return;
+
+        const rows = buildRecordsTrackerRows();
+        const totalIds = rows.reduce((sum, r) => sum + r.totalId, 0);
+        const totalWorking = rows.reduce((sum, r) => sum + r.working, 0);
+        const totalTransfer = rows.reduce((sum, r) => sum + r.transfer, 0);
+        const totalPending = rows.reduce((sum, r) => sum + r.pending, 0);
+        const totalRemaining = rows.reduce((sum, r) => sum + r.remaining, 0);
+
+        cards.innerHTML = [
+            ['Groups', rows.length],
+            ['Total ID', totalIds],
+            ['Working Amt', formatMoney(totalWorking)],
+            ['Transfer Amt', formatMoney(totalTransfer)],
+            ['Pending Amt', formatMoney(totalPending)],
+            ['Remaining Amt', formatMoney(totalRemaining)]
+        ].map(item => `<div class="records-summary-card"><span>${item[0]}</span><strong>${item[1]}</strong></div>`).join('');
+
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:24px;">No records found</td></tr>';
+            return;
+        }
+
+        body.innerHTML = rows.map(r => {
+            const dateId = getRecordsRowDomId(r.rowKey, 'date');
+            const monthId = getRecordsRowDomId(r.rowKey, 'month');
+            const totalId = getRecordsRowDomId(r.rowKey, 'totalId');
+            const workingId = getRecordsRowDomId(r.rowKey, 'working');
+            const transferId = getRecordsRowDomId(r.rowKey, 'transfer');
+            const pendingId = getRecordsRowDomId(r.rowKey, 'pending');
+            const remainingId = getRecordsRowDomId(r.rowKey, 'remaining');
+            const monthlyId = getRecordsRowDomId(r.rowKey, 'monthly');
+            const setupId = getRecordsRowDomId(r.rowKey, 'setup');
+            const transferDetailsId = getRecordsRowDomId(r.rowKey, 'transferDetails');
+            const remarksId = getRecordsRowDomId(r.rowKey, 'remarks');
+            return `<tr>
+                <td><input class="records-cell-input" type="date" id="${dateId}" value="${escapeHtml(r.date)}" onchange="updateRecordsTrackerCell('${r.rowKey}','date',this.value)"></td>
+                <td><input class="records-cell-input" type="text" id="${monthId}" value="${escapeHtml(r.month)}" onchange="updateRecordsTrackerCell('${r.rowKey}','month',this.value)"></td>
+                <td><input class="records-cell-input" type="number" step="1" id="${totalId}" value="${escapeHtml(r.totalId)}" onchange="updateRecordsTrackerCell('${r.rowKey}','totalId',this.value)"></td>
+                <td><input class="records-cell-input" type="number" step="0.01" id="${workingId}" value="${escapeHtml(r.working)}" onchange="updateRecordsTrackerCell('${r.rowKey}','working',this.value)"></td>
+                <td><input class="records-cell-input" type="number" step="0.01" id="${transferId}" value="${escapeHtml(r.transfer)}" onchange="updateRecordsTrackerCell('${r.rowKey}','transfer',this.value)"></td>
+                <td><input class="records-cell-input" type="number" step="0.01" id="${pendingId}" value="${escapeHtml(r.pending)}" readonly></td>
+                <td><input class="records-cell-input" type="number" step="0.01" id="${remainingId}" value="${escapeHtml(r.remaining)}" readonly></td>
+                <td><input class="records-cell-input" type="number" step="0.01" id="${monthlyId}" value="${escapeHtml(r.monthly)}" onchange="updateRecordsTrackerCell('${r.rowKey}','monthly',this.value)"></td>
+                <td><input class="records-cell-input" type="number" step="0.01" id="${setupId}" value="${escapeHtml(r.setup)}" onchange="updateRecordsTrackerCell('${r.rowKey}','setup',this.value)"></td>
+                <td><textarea class="records-cell-input records-textarea" id="${transferDetailsId}" onchange="updateRecordsTrackerCell('${r.rowKey}','transferDetails',this.value)">${escapeHtml(r.transferDetails || '')}</textarea></td>
+                <td><textarea class="records-cell-input records-textarea" id="${remarksId}" onchange="updateRecordsTrackerCell('${r.rowKey}','remarks',this.value)">${escapeHtml(r.remarks || '')}</textarea></td>
+                <td>
+                    <div class="records-row-actions">
+                        <button type="button" class="records-action-btn update" onclick="saveRecordsTrackerRow('${r.rowKey}')">Update</button>
+                        <button type="button" class="records-action-btn delete" onclick="deleteRecordsTrackerRow('${r.rowKey}')">Delete</button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function exportRecordsTrackerCsv() {
+        const rows = buildRecordsTrackerRows();
+        if (!rows.length) return alert('No records to export');
+        const headers = ['Date', 'Month', 'Total ID', 'Working Amount', 'Transfer Amt', 'Total Pending Amt', 'Remaining Amt', 'Monthly Amount', 'Other Data Setup & Uploading', 'Transfer Date / Details', 'Remarks'];
+        const csvRows = rows.map(r => [r.date, r.month, r.totalId, r.working, r.transfer, r.pending, r.remaining, r.monthly, r.setup, r.transferDetails || '', r.remarks || '']);
+        downloadCsvCustom(`KRP_Records_Tracker_${getLocalISODate(new Date())}.csv`, headers, csvRows);
+    }
+
+    function downloadCsvCustom(filename, headers, rows) {
+        let csv = headers.map(csvCell).join(',') + '\n';
+        rows.forEach(row => {
+            csv += row.map(csvCell).join(',') + '\n';
+        });
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    function readCustomRecordsTrackerRows() {
+        try {
+            const rows = JSON.parse(localStorage.getItem(RECORDS_TRACKER_CUSTOM_KEY) || '[]');
+            return Array.isArray(rows) ? rows : [];
+        } catch (error) {
+            localStorage.removeItem(RECORDS_TRACKER_CUSTOM_KEY);
+            return [];
+        }
+    }
+
+    function writeCustomRecordsTrackerRows(rows) {
+        try {
+            localStorage.setItem(RECORDS_TRACKER_CUSTOM_KEY, JSON.stringify(Array.isArray(rows) ? rows : []));
+        } catch (error) {
+            console.warn('Custom records save failed:', error);
+        }
+    }
+
+    function readDeletedRecordsTrackerRows() {
+        try {
+            const rows = JSON.parse(localStorage.getItem(RECORDS_TRACKER_DELETED_KEY) || '[]');
+            return Array.isArray(rows) ? rows : [];
+        } catch (error) {
+            localStorage.removeItem(RECORDS_TRACKER_DELETED_KEY);
+            return [];
+        }
+    }
+
+    function writeDeletedRecordsTrackerRows(rows) {
+        try {
+            localStorage.setItem(RECORDS_TRACKER_DELETED_KEY, JSON.stringify(Array.isArray(rows) ? rows : []));
+        } catch (error) {
+            console.warn('Deleted records save failed:', error);
+        }
+    }
+
+    function openAddRecordsModal() {
+        const modal = document.getElementById('addRecordsModal');
+        if (!modal) return;
+        document.getElementById('addRecordsForm').reset();
+        document.getElementById('add_record_date').value = getLocalISODate(new Date());
+        syncAddRecordMonth();
+        calcAddRecordRemaining();
+        modal.classList.add('active');
+    }
+
+    function closeAddRecordsModal() {
+        document.getElementById('addRecordsModal')?.classList.remove('active');
+    }
+
+    function syncAddRecordMonth() {
+        const dateVal = document.getElementById('add_record_date')?.value || '';
+        const monthEl = document.getElementById('add_record_month');
+        if (!monthEl) return;
+        if (!dateVal) return;
+        const d = new Date(dateVal + 'T00:00:00');
+        monthEl.value = d.toLocaleString('default', { month: 'short', year: '2-digit' });
+    }
+
+    function calcAddRecordRemaining() {
+        const working = normalizeRecordNumber(document.getElementById('add_record_working')?.value);
+        const transfer = normalizeRecordNumber(document.getElementById('add_record_transfer')?.value);
+        const monthly = normalizeRecordNumber(document.getElementById('add_record_monthly')?.value);
+        const setup = normalizeRecordNumber(document.getElementById('add_record_setup')?.value);
+        const pending = working;
+        const remaining = Math.max(pending - transfer - monthly - setup, 0);
+        const pendingEl = document.getElementById('add_record_pending');
+        const remainingEl = document.getElementById('add_record_remaining');
+        if (pendingEl) pendingEl.value = pending.toFixed(2);
+        if (remainingEl) remainingEl.value = remaining.toFixed(2);
+    }
+
+    function submitAddRecordsEntry(event) {
+        event.preventDefault();
+        const date = document.getElementById('add_record_date').value;
+        if (!date) return;
+
+        const month = document.getElementById('add_record_month').value.trim() || (() => {
+            const d = new Date(date + 'T00:00:00');
+            return d.toLocaleString('default', { month: 'short', year: '2-digit' });
+        })();
+
+        const working = normalizeRecordNumber(document.getElementById('add_record_working').value);
+        const transfer = normalizeRecordNumber(document.getElementById('add_record_transfer').value);
+        const monthly = normalizeRecordNumber(document.getElementById('add_record_monthly').value);
+        const setup = normalizeRecordNumber(document.getElementById('add_record_setup').value);
+        const totalId = Math.max(parseInt(document.getElementById('add_record_totalId').value || '0', 10) || 0, 0);
+        const status = document.getElementById('add_record_status').value || 'PENDING';
+        const transferDetails = document.getElementById('add_record_transferDetails').value.trim();
+        const remarks = document.getElementById('add_record_remarks').value.trim();
+        const pending = working;
+        const remaining = Math.max(pending - transfer - monthly - setup, 0);
+        const rowKey = `custom:${Date.now()}`;
+
+        const customRows = readCustomRecordsTrackerRows();
+        customRows.push({ rowKey, date, month, status, totalId, working, transfer, pending, remaining, monthly, setup, transferDetails, remarks });
+        writeCustomRecordsTrackerRows(customRows);
+        closeAddRecordsModal();
+        renderRecordsTracker();
+        showMessage('New record added to Records Tracker', 'success');
+    }
+
     function updateStats(data) {
         const idxStatus  = getColIndex('PAYMENT STATUS');
         const idxRecv    = getColIndex('RECEIVED AMOUNT');
@@ -2601,8 +3224,15 @@
         if (!currentData.length) return alert('No data to export');
 
         const filters = getTrackerFilters();
-        const idxDate    = getColIndex('DATE');
-        const idxIdAct   = getColIndex('ID ACTIVATION AMOUNT');
+        const idxDate      = getColIndex('DATE');
+        const idxContact   = getColIndex('CONTACT NO. OR NAME');
+        const idxState     = getColIndex('STATE');
+        const idxPurpose   = getColIndex('PURPOSE');
+        const idxLogin     = getColIndex('LOGIN ID');
+        const idxIdAct     = getColIndex('ID ACTIVATION AMOUNT');
+        const idxUtr       = getColIndex('UTR / TRN NO.');
+        const idxStatus    = getColIndex('PAYMENT STATUS');
+        const idxRemarks   = getColIndex('REMARKS');
 
         const idActivationRows = currentData.filter(row => {
             if (!shouldIncludeByDate(row, idxDate, filters)) return false;
@@ -2616,7 +3246,29 @@
             : filters.dateMode === 'datewise' ? filters.dateValue
             : filters.monthF !== 'all' ? filters.monthF
             : 'all';
-        downloadCsv(`KRP_ID_Activation_${scopeLabel}.csv`, idActivationRows);
+        const exportHeaders = [
+            'DATE',
+            'CONTACT NO. OR NAME',
+            'STATE',
+            'PURPOSE',
+            'LOGIN ID',
+            'ID ACTIVATION AMOUNT',
+            'UTR / TRN NO.',
+            'PAYMENT STATUS',
+            'REMARKS'
+        ];
+        const exportRows = idActivationRows.map(row => [
+            idxDate !== -1 ? getLocalISODate(row[idxDate]) : '',
+            idxContact !== -1 ? showSheetText(row[idxContact]) : '',
+            idxState !== -1 ? showSheetText(row[idxState]) : '',
+            idxPurpose !== -1 ? showSheetText(row[idxPurpose]) : '',
+            idxLogin !== -1 ? showSheetText(row[idxLogin]) : '',
+            idxIdAct !== -1 ? (parseFloat(row[idxIdAct]) || 0).toFixed(2) : '0.00',
+            idxUtr !== -1 ? showSheetText(row[idxUtr]) : '',
+            idxStatus !== -1 ? showSheetText(row[idxStatus]) : '',
+            idxRemarks !== -1 ? showSheetText(row[idxRemarks]) : ''
+        ]);
+        downloadCsvCustom(`KRP_ID_Activation_${scopeLabel}.csv`, exportHeaders, exportRows);
     }
 
     // ─── UPI UPDATE ───────────────────────────────────────────────
