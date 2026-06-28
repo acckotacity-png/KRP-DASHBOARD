@@ -624,11 +624,11 @@
                 <table id="recordsTrackerTable">
                     <thead>
                         <tr>
-                            <th>Date</th><th>Month</th><th>Total ID</th><th>Working Amount</th><th>Transfer Amt</th><th>Total Pending Amt</th><th>Remaining Amt</th><th>Monthly Amount</th><th>Other Data Setup &amp; Uploading</th><th>Transfer Date / Details</th><th>Remarks</th><th>Actions</th>
+                            <th>Date</th><th>Month</th><th>Total ID</th><th>Working Amount</th><th>Transfer Amt</th><th>Remaining Amt</th><th>Monthly Amount</th><th>Other Data Setup &amp; Uploading</th><th>Transfer Date / Details</th><th>Remarks</th><th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="recordsTrackerBody">
-                        <tr><td colspan="12" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                        <tr><td colspan="11" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1141,6 +1141,7 @@
     const RECORDS_TRACKER_DRAFT_KEY = 'krp_records_tracker_draft_v1';
     const RECORDS_TRACKER_CUSTOM_KEY = 'krp_records_tracker_custom_v1';
     const RECORDS_TRACKER_DELETED_KEY = 'krp_records_tracker_deleted_v1';
+    const RECORDS_TRACKER_ARCHIVE_KEY = 'krp_records_tracker_archive_v1';
 
     let currentData = [], currentHeaders = [], isMobileView = false;
     let currentQRPayload = null;
@@ -1704,7 +1705,7 @@
     function sendIdActivationWhatsApp(rowIndex, serialNo = '') {
         const record = currentData[rowIndex];
         if (!record) return;
-        const phone = '919039779483';
+        const phone = '916367327414';
         const serial = serialNo || getIdActivationSerialNo(rowIndex);
         if (!serial) {
             showMessage('ID serial not ready for this record', 'error');
@@ -2759,8 +2760,8 @@
             const status = saved.status !== undefined ? saved.status : item.status || 'PENDING';
             const date = saved.date || item.date;
             const month = saved.month || item.month;
-            const pending = Math.max(working - transfer, 0);
-            const remaining = Math.max(pending - monthly - setup, 0);
+            const pending = working;
+            const remaining = Math.max(pending - transfer - monthly, 0);
             return { ...item, date, month, totalId, working, transfer, monthly, setup, pending, remaining, remarks, transferDetails, status };
         }).concat(customRows.filter(item => {
             const keyMatch = item.rowKey || '';
@@ -2781,8 +2782,8 @@
             const remarks = saved.remarks !== undefined ? saved.remarks : (item.remarks || '');
             const transferDetails = saved.transferDetails !== undefined ? saved.transferDetails : (item.transferDetails || '');
             const status = (saved.status || item.status || 'PENDING').toString().toUpperCase();
-            const pending = Math.max(working - transfer, 0);
-            const remaining = Math.max(pending - monthly - setup, 0);
+            const pending = working;
+            const remaining = Math.max(pending - transfer - monthly, 0);
             return {
                 rowKey: item.rowKey || `custom:${index}`,
                 key: date,
@@ -2801,16 +2802,29 @@
             };
         }));
 
-        const orderedRows = builtRows.sort((a, b) => b.key.localeCompare(a.key));
-        let carryRemaining = 0;
-        return orderedRows.map(item => {
+        const orderedRows = builtRows.sort((a, b) => a.key.localeCompare(b.key));
+        if (filters.viewMode === 'monthly') {
+            let carryRemaining = 0;
+            const monthlyRows = orderedRows.map(item => {
+                const working = normalizeRecordNumber(item.working);
+                const transfer = normalizeRecordNumber(item.transfer);
+                const monthly = normalizeRecordNumber(item.monthly);
+                const setup = normalizeRecordNumber(item.setup);
+                const pending = working + carryRemaining;
+                const remaining = Math.max(pending - transfer - monthly, 0);
+                carryRemaining = remaining;
+                return { ...item, working, transfer, monthly, setup, pending, remaining };
+            });
+            return monthlyRows.sort((a, b) => b.key.localeCompare(a.key));
+        }
+
+        return orderedRows.sort((a, b) => b.key.localeCompare(a.key)).map(item => {
             const working = normalizeRecordNumber(item.working);
             const transfer = normalizeRecordNumber(item.transfer);
             const monthly = normalizeRecordNumber(item.monthly);
             const setup = normalizeRecordNumber(item.setup);
-            const pending = working + carryRemaining;
-            const remaining = Math.max(pending - transfer - monthly - setup, 0);
-            carryRemaining = remaining;
+            const pending = working;
+            const remaining = Math.max(pending - transfer - monthly, 0);
             return { ...item, working, transfer, monthly, setup, pending, remaining };
         });
     }
@@ -2859,20 +2873,24 @@
 
     function deleteRecordsTrackerRow(rowKey) {
         if (!confirm('Delete this record from Records Tracker?')) return;
-        const customRows = readCustomRecordsTrackerRows();
-        const customNext = customRows.filter(item => item.rowKey !== rowKey);
-        if (customNext.length !== customRows.length) {
-            writeCustomRecordsTrackerRows(customNext);
-        } else {
-            const deletedRows = new Set(readDeletedRecordsTrackerRows());
-            deletedRows.add(rowKey);
-            writeDeletedRecordsTrackerRows(Array.from(deletedRows));
+        const currentRows = buildRecordsTrackerRows();
+        const snapshot = currentRows.find(item => item.rowKey === rowKey);
+        if (snapshot) {
+            const archiveRows = readRecordsTrackerArchiveRows();
+            archiveRows.push({
+                ...snapshot,
+                archivedAt: new Date().toISOString()
+            });
+            writeRecordsTrackerArchiveRows(archiveRows);
         }
+        const deletedRows = new Set(readDeletedRecordsTrackerRows());
+        deletedRows.add(rowKey);
+        writeDeletedRecordsTrackerRows(Array.from(deletedRows));
         const draft = readRecordsTrackerDraft();
         delete draft[rowKey];
         writeRecordsTrackerDraft(draft);
         renderRecordsTracker();
-        showMessage('Record deleted', 'success');
+        showMessage('Record archived', 'success');
     }
 
     function renderRecordsTracker() {
@@ -2883,21 +2901,17 @@
         const rows = buildRecordsTrackerRows();
         const totalIds = rows.reduce((sum, r) => sum + r.totalId, 0);
         const totalWorking = rows.reduce((sum, r) => sum + r.working, 0);
-        const totalTransfer = rows.reduce((sum, r) => sum + r.transfer, 0);
-        const totalPending = rows.reduce((sum, r) => sum + r.pending, 0);
-        const totalRemaining = rows.reduce((sum, r) => sum + r.remaining, 0);
+        const totalRemaining = rows.length ? normalizeRecordNumber(rows[0].remaining) : 0;
 
         cards.innerHTML = [
             ['Groups', rows.length],
             ['Total ID', totalIds],
             ['Working Amt', formatMoney(totalWorking)],
-            ['Transfer Amt', formatMoney(totalTransfer)],
-            ['Pending Amt', formatMoney(totalPending)],
             ['Remaining Amt', formatMoney(totalRemaining)]
         ].map(item => `<div class="records-summary-card"><span>${item[0]}</span><strong>${item[1]}</strong></div>`).join('');
 
         if (!rows.length) {
-            body.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:24px;">No records found</td></tr>';
+            body.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:24px;">No records found</td></tr>';
             return;
         }
 
@@ -2907,7 +2921,6 @@
             const totalId = getRecordsRowDomId(r.rowKey, 'totalId');
             const workingId = getRecordsRowDomId(r.rowKey, 'working');
             const transferId = getRecordsRowDomId(r.rowKey, 'transfer');
-            const pendingId = getRecordsRowDomId(r.rowKey, 'pending');
             const remainingId = getRecordsRowDomId(r.rowKey, 'remaining');
             const monthlyId = getRecordsRowDomId(r.rowKey, 'monthly');
             const setupId = getRecordsRowDomId(r.rowKey, 'setup');
@@ -2919,7 +2932,6 @@
                 <td><input class="records-cell-input" type="number" step="1" id="${totalId}" value="${escapeHtml(r.totalId)}" onchange="updateRecordsTrackerCell('${r.rowKey}','totalId',this.value)"></td>
                 <td><input class="records-cell-input" type="number" step="0.01" id="${workingId}" value="${escapeHtml(r.working)}" onchange="updateRecordsTrackerCell('${r.rowKey}','working',this.value)"></td>
                 <td><input class="records-cell-input" type="number" step="0.01" id="${transferId}" value="${escapeHtml(r.transfer)}" onchange="updateRecordsTrackerCell('${r.rowKey}','transfer',this.value)"></td>
-                <td><input class="records-cell-input" type="number" step="0.01" id="${pendingId}" value="${escapeHtml(r.pending)}" readonly></td>
                 <td><input class="records-cell-input" type="number" step="0.01" id="${remainingId}" value="${escapeHtml(r.remaining)}" readonly></td>
                 <td><input class="records-cell-input" type="number" step="0.01" id="${monthlyId}" value="${escapeHtml(r.monthly)}" onchange="updateRecordsTrackerCell('${r.rowKey}','monthly',this.value)"></td>
                 <td><input class="records-cell-input" type="number" step="0.01" id="${setupId}" value="${escapeHtml(r.setup)}" onchange="updateRecordsTrackerCell('${r.rowKey}','setup',this.value)"></td>
@@ -2938,8 +2950,8 @@
     function exportRecordsTrackerCsv() {
         const rows = buildRecordsTrackerRows();
         if (!rows.length) return alert('No records to export');
-        const headers = ['Date', 'Month', 'Total ID', 'Working Amount', 'Transfer Amt', 'Total Pending Amt', 'Remaining Amt', 'Monthly Amount', 'Other Data Setup & Uploading', 'Transfer Date / Details', 'Remarks'];
-        const csvRows = rows.map(r => [r.date, r.month, r.totalId, r.working, r.transfer, r.pending, r.remaining, r.monthly, r.setup, r.transferDetails || '', r.remarks || '']);
+        const headers = ['Date', 'Month', 'Total ID', 'Working Amount', 'Transfer Amt', 'Remaining Amt', 'Monthly Amount', 'Other Data Setup & Uploading', 'Transfer Date / Details', 'Remarks'];
+        const csvRows = rows.map(r => [r.date, r.month, r.totalId, r.working, r.transfer, r.remaining, r.monthly, r.setup, r.transferDetails || '', r.remarks || '']);
         downloadCsvCustom(`KRP_Records_Tracker_${getLocalISODate(new Date())}.csv`, headers, csvRows);
     }
 
@@ -2992,6 +3004,24 @@
         }
     }
 
+    function readRecordsTrackerArchiveRows() {
+        try {
+            const rows = JSON.parse(localStorage.getItem(RECORDS_TRACKER_ARCHIVE_KEY) || '[]');
+            return Array.isArray(rows) ? rows : [];
+        } catch (error) {
+            localStorage.removeItem(RECORDS_TRACKER_ARCHIVE_KEY);
+            return [];
+        }
+    }
+
+    function writeRecordsTrackerArchiveRows(rows) {
+        try {
+            localStorage.setItem(RECORDS_TRACKER_ARCHIVE_KEY, JSON.stringify(Array.isArray(rows) ? rows : []));
+        } catch (error) {
+            console.warn('Records tracker archive save failed:', error);
+        }
+    }
+
     function openAddRecordsModal() {
         const modal = document.getElementById('addRecordsModal');
         if (!modal) return;
@@ -3019,9 +3049,8 @@
         const working = normalizeRecordNumber(document.getElementById('add_record_working')?.value);
         const transfer = normalizeRecordNumber(document.getElementById('add_record_transfer')?.value);
         const monthly = normalizeRecordNumber(document.getElementById('add_record_monthly')?.value);
-        const setup = normalizeRecordNumber(document.getElementById('add_record_setup')?.value);
         const pending = working;
-        const remaining = Math.max(pending - transfer - monthly - setup, 0);
+        const remaining = Math.max(pending - transfer - monthly, 0);
         const pendingEl = document.getElementById('add_record_pending');
         const remainingEl = document.getElementById('add_record_remaining');
         if (pendingEl) pendingEl.value = pending.toFixed(2);
@@ -3047,7 +3076,7 @@
         const transferDetails = document.getElementById('add_record_transferDetails').value.trim();
         const remarks = document.getElementById('add_record_remarks').value.trim();
         const pending = working;
-        const remaining = Math.max(pending - transfer - monthly - setup, 0);
+        const remaining = Math.max(pending - transfer - monthly, 0);
         const rowKey = `custom:${Date.now()}`;
 
         const customRows = readCustomRecordsTrackerRows();
