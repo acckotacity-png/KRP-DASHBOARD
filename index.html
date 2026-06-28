@@ -73,6 +73,7 @@
         .records-cell-input { width: 100%; min-width: 92px; padding: 8px 9px; border: 1px solid #d8deef; border-radius: 8px; background: #fff; color: #1b2559; font-size: 12px; outline: none; }
         .records-cell-input[readonly] { background: #f4f7fe; color: #6b7280; cursor: not-allowed; }
         .records-cell-input:focus { border-color: #4318ff; box-shadow: 0 0 0 2px rgba(67,24,255,0.1); }
+        .validation-error { border-color: #ee5d50 !important; box-shadow: 0 0 0 2px rgba(238,93,80,0.15) !important; }
         .records-textarea { min-height: 54px; resize: vertical; }
         .records-row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
         .records-action-btn { border: none; border-radius: 8px; padding: 7px 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
@@ -1190,6 +1191,8 @@
         populatePurposeYears();
         loadSavedBusinessSettings();
         wireContactAutofill();
+        bindRecordValidation('');
+        bindRecordValidation('edit_');
         if (window.innerWidth < 768) toggleViewMode();
         switchTab('form');
         loadTrackerData(true);
@@ -1805,6 +1808,20 @@
         const display = document.getElementById(fieldId + '-display');
         if (values.length > 0) { display.textContent = values.join(', '); display.classList.add('has-value'); }
         else { display.textContent = 'Select...'; display.classList.remove('has-value'); }
+        if (fieldId === 'purpose' || fieldId === 'edit_purpose') {
+            const prefix = fieldId === 'edit_purpose' ? 'edit_' : '';
+            clearValidationCache(prefix);
+            if (!yearSelect || !yearSelect.value) {
+                clearValidationHighlights(prefix);
+                return;
+            }
+            const result = validateRecordEntry(prefix, prefix === 'edit_' ? document.getElementById('edit_rowId')?.value : null);
+            if (result.ok) {
+                clearValidationHighlights(prefix);
+                return;
+            }
+            notifyValidationResult(result, prefix);
+        }
     }
     function setMultiSelectState(fieldId, valueStr) {
         const values = valueStr.split(',').map(s => s.trim()).filter(s => s);
@@ -1854,6 +1871,173 @@
 
     function normalizeLookupText(value) {
         return showSheetText(value).trim().replace(/\s+/g, ' ').toLowerCase();
+    }
+
+    function normalizeValidationText(value) {
+        return showSheetText(value).trim().replace(/\s+/g, ' ').toUpperCase();
+    }
+
+    function getPurposeValidationParts(value) {
+        const parts = (showSheetText(value) || '').split(',').map(p => p.trim()).filter(Boolean);
+        const years = parts
+            .map(normalizePurposeYearValue)
+            .filter(Boolean)
+            .map(y => `YEAR ${y}`)
+            .sort();
+        const purposes = parts
+            .filter(part => !isPurposeYearToken(part))
+            .map(part => normalizeValidationText(part))
+            .filter(Boolean)
+            .sort();
+        return { purposes, years };
+    }
+
+    function getPurposeValidationKey(value) {
+        const { purposes, years } = getPurposeValidationParts(value);
+        return [purposes.join(' + '), years.join(' + ')].filter(Boolean).join(' | ');
+    }
+
+    function getValidationDataset() {
+        if (currentHeaders.length && currentData.length) {
+            return { headers: currentHeaders, data: currentData };
+        }
+        const cached = readTrackerCache();
+        if (cached && Array.isArray(cached.headers) && Array.isArray(cached.data)) {
+            return { headers: cached.headers, data: cached.data };
+        }
+        return { headers: currentHeaders, data: currentData };
+    }
+
+    function getValidationColIndex(headers, name) {
+        return Array.isArray(headers)
+            ? headers.findIndex(h => h && h.toString().trim().toUpperCase() === name.toUpperCase())
+            : -1;
+    }
+
+    function getValidationFieldValue(prefix, field) {
+        return document.getElementById(`${prefix}${field}`)?.value || '';
+    }
+
+    function clearValidationHighlights(prefix) {
+        [`${prefix}purpose-display`, `${prefix}purposeYear`, `${prefix}loginId`, `${prefix}utrNo`].forEach(id => {
+            document.getElementById(id)?.classList.remove('validation-error');
+        });
+    }
+
+    function applyValidationHighlights(prefix, conflict) {
+        clearValidationHighlights(prefix);
+        if (!conflict || !Array.isArray(conflict.highlightIds)) return;
+        conflict.highlightIds.forEach(id => document.getElementById(id)?.classList.add('validation-error'));
+    }
+
+    function buildRecordConflict(type, message, valueKey, highlightIds, fieldId) {
+        return { ok: false, type, message, valueKey, highlightIds, fieldId };
+    }
+
+    function validateRecordEntry(prefix = '', excludeRowIndex = null) {
+        const purposeRaw = getValidationFieldValue(prefix, 'purpose');
+        const purposeParts = getPurposeValidationParts(purposeRaw);
+        const purposeKey = getPurposeValidationKey(purposeRaw);
+        const utrNo = normalizeValidationText(getValidationFieldValue(prefix, 'utrNo'));
+
+        if (!purposeKey && !utrNo) return { ok: true };
+
+        if (purposeParts.purposes.length && !purposeParts.years.length) {
+            return buildRecordConflict(
+                'purpose_year_required',
+                'Purpose ke saath year select karna zaroori hai. Please year choose karein.',
+                purposeKey || purposeRaw,
+                [`${prefix}purpose-display`, `${prefix}purposeYear`],
+                `${prefix}purposeYear`
+            );
+        }
+
+        const { headers, data } = getValidationDataset();
+        if (!headers.length || !data.length) return { ok: true };
+
+        const idxPurpose = getValidationColIndex(headers, 'PURPOSE');
+        const idxUtr = getValidationColIndex(headers, 'UTR / TRN NO.');
+        const excludedIdx = excludeRowIndex === null || excludeRowIndex === undefined || excludeRowIndex === ''
+            ? null
+            : Number(excludeRowIndex);
+
+        for (let i = 0; i < data.length; i++) {
+            if (excludedIdx !== null && i === excludedIdx) continue;
+            const row = data[i];
+            const rowPurposeKey = idxPurpose !== -1 ? getPurposeValidationKey(row[idxPurpose]) : '';
+            const rowUtr = idxUtr !== -1 ? normalizeValidationText(row[idxUtr]) : '';
+
+            if (utrNo && rowUtr && rowUtr === utrNo) {
+                return buildRecordConflict(
+                    'utr_duplicate',
+                    `UTR / TRN NO. "${showSheetText(getValidationFieldValue(prefix, 'utrNo')).trim()}" already exist karta hai. Please different UTR enter karein.`,
+                    utrNo,
+                    [`${prefix}utrNo`],
+                    `${prefix}utrNo`
+                );
+            }
+
+            if (purposeKey && rowPurposeKey && rowPurposeKey === purposeKey) {
+                return buildRecordConflict(
+                    'purpose_year_duplicate',
+                    'Same Purpose + Year combination already use ho chuka hai. Please different year choose karein.',
+                    purposeKey,
+                    [`${prefix}purpose-display`, `${prefix}purposeYear`],
+                    `${prefix}purposeYear`
+                );
+            }
+        }
+
+        return { ok: true };
+    }
+
+    function notifyValidationResult(result, prefix = '') {
+        if (!result || result.ok) return true;
+        const field = document.getElementById(result.fieldId);
+        if (field && field.dataset.lastValidationKey === result.valueKey) return false;
+        if (field) field.dataset.lastValidationKey = result.valueKey;
+        showMessage(result.message, 'error');
+        applyValidationHighlights(prefix, result);
+        field?.focus({ preventScroll: true });
+        return false;
+    }
+
+    function clearValidationCacheForField(fieldId) {
+        const el = document.getElementById(fieldId);
+        if (el) el.dataset.lastValidationKey = '';
+    }
+
+    function clearValidationCache(prefix) {
+        [`${prefix}purpose-display`, `${prefix}loginId`, `${prefix}utrNo`].forEach(id => clearValidationCacheForField(id));
+    }
+
+    function bindRecordValidation(prefix) {
+        ['utrNo'].forEach(field => {
+            const el = document.getElementById(`${prefix}${field}`);
+            if (!el || el.dataset.validationBound === '1') return;
+            const runValidation = debounce(() => {
+                const result = validateRecordEntry(prefix, prefix === 'edit_' ? document.getElementById('edit_rowId')?.value : null);
+                if (result.ok) {
+                    clearValidationHighlights(prefix);
+                    clearValidationCache(prefix);
+                    return;
+                }
+                if (result.fieldId === `${prefix}${field}`) {
+                    notifyValidationResult(result, prefix);
+                }
+            }, 150);
+
+            el.addEventListener('input', () => {
+                clearValidationCache(prefix);
+                runValidation();
+            });
+            el.addEventListener('blur', runValidation);
+            el.dataset.validationBound = '1';
+        });
+    }
+
+    function validateAndNotifyRecordEntry(prefix, excludeRowIndex = null) {
+        return notifyValidationResult(validateRecordEntry(prefix, excludeRowIndex), prefix);
     }
 
     function getContactLookupKey(value) {
@@ -2814,6 +2998,7 @@
     // ─── SUBMIT NEW ENTRY ─────────────────────────────────────────
     async function submitNewEntry(event) {
         event.preventDefault();
+        if (!validateAndNotifyRecordEntry('')) return;
         const btn = event.target.querySelector('.btn-submit');
         const ogText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
@@ -2884,12 +3069,13 @@
 
     async function submitFullEdit(event) {
         event.preventDefault();
+        const rowIndex = document.getElementById('edit_rowId').value;
+        if (!validateAndNotifyRecordEntry('edit_', rowIndex)) return;
         const btn = document.getElementById('editForm').querySelector('.btn-submit');
         const ogText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
         btn.disabled = true;
 
-        const rowIndex = document.getElementById('edit_rowId').value;
         const formData = new URLSearchParams();
         formData.append('action',            'update');
         formData.append('row',               rowIndex);
