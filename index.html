@@ -2251,6 +2251,19 @@
         };
     }
 
+    function getTrackerFilteredRows() {
+        if (!currentHeaders.length) return [];
+        const filters = getTrackerFilters();
+        const idxDate = getColIndex('DATE');
+        const idxStatus = getColIndex('PAYMENT STATUS');
+        return currentData.filter(row => {
+            if (filters.statusF !== 'all' && idxStatus !== -1 && (row[idxStatus]?.toString().toUpperCase() || '') !== filters.statusF) return false;
+            if (!shouldIncludeByDate(row, idxDate, filters)) return false;
+            if (filters.term && !row.some(cell => cell && cell.toString().toLowerCase().includes(filters.term))) return false;
+            return true;
+        });
+    }
+
     function shouldIncludeByDate(row, idxDate, filters) {
         if (idxDate === -1) return true;
         const rowDate = getLocalISODate(row[idxDate]);
@@ -3413,12 +3426,14 @@
     }
 
     function exportToExcel() {
-        if (!currentData.length) return alert('No data to export');
-        downloadCsv('KRP_Transactions.csv', currentData);
+        const filteredRows = getTrackerFilteredRows();
+        if (!filteredRows.length) return alert('No data to export');
+        downloadCsv('KRP_Transactions.csv', filteredRows);
     }
 
     function exportIdActivationData() {
-        if (!currentData.length) return alert('No data to export');
+        const filteredRows = getTrackerFilteredRows();
+        if (!filteredRows.length) return alert('No data to export');
 
         const filters = getTrackerFilters();
         const idxDate      = getColIndex('DATE');
@@ -3431,8 +3446,7 @@
         const idxStatus    = getColIndex('PAYMENT STATUS');
         const idxRemarks   = getColIndex('REMARKS');
 
-        const idActivationRows = currentData.filter(row => {
-            if (!shouldIncludeByDate(row, idxDate, filters)) return false;
+        const idActivationRows = filteredRows.filter(row => {
             const idAmount = idxIdAct !== -1 ? (parseFloat(row[idxIdAct]) || 0) : 0;
             return idAmount > 0;
         });
