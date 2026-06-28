@@ -159,6 +159,7 @@
         .action-icons { display: flex; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
         .action-btn { width: 28px; height: 28px; border-radius: 6px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; }
         .btn-whatsapp { background: #e6fcf5; color: #05cd99; }
+        .btn-wa-direct { background: #25D366; color: #fff; }
         .btn-edit { background: #e6f2ff; color: #4318ff; }
         .btn-config { background: #fff5e6; color: #ff9800; }
         .btn-delete { background: #ffe6e6; color: #ee5d50; }
@@ -1632,6 +1633,37 @@
         toggleWhatsAppTargetInput();
     }
 
+    function getPurposeYearForMessage(purposeValue) {
+        const parts = getPurposeValidationParts(purposeValue);
+        const yearText = parts.years.map(y => y.replace(/^YEAR\s+/i, '')).join(' ');
+        const purposeText = parts.purposes.join(' + ');
+        return [purposeText, yearText].filter(Boolean).join(' ');
+    }
+
+    function buildIdActivationWhatsAppMessage(record, serialNo) {
+        const idxPurpose = getColIndex('PURPOSE');
+        const idxState = getColIndex('STATE');
+        const idxIdAct = getColIndex('ID ACTIVATION AMOUNT');
+        const idxLogin = getColIndex('LOGIN ID');
+
+        const purposeText = idxPurpose !== -1 ? getPurposeYearForMessage(record[idxPurpose]) : '';
+        const stateText = idxState !== -1 ? showSheetText(record[idxState]).trim() : '';
+        const amountText = idxIdAct !== -1 ? (parseFloat(record[idxIdAct]) || 0).toLocaleString('en-IN') : '0';
+        const loginText = idxLogin !== -1 ? showSheetText(record[idxLogin]).trim() : '';
+        const serialPrefix = showSheetText(serialNo).trim() || '';
+
+        return `${serialPrefix ? serialPrefix + '. ' : ''}ID ACTIVATION FOR ${purposeText}${stateText ? ' ' + stateText : ''} - ${amountText}/-\n\n${loginText}`;
+    }
+
+    function sendIdActivationWhatsApp(rowIndex, serialNo = '') {
+        const record = currentData[rowIndex];
+        if (!record) return;
+        const phone = '916367327414';
+        const message = buildIdActivationWhatsAppMessage(record, serialNo || (rowIndex + 1));
+        window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`, '_blank');
+        showMessage('ID Activation WhatsApp message ready', 'success');
+    }
+
     function openContactLedger(rowIndex) {
         const record = currentData[rowIndex];
         const idxContact = getColIndex('CONTACT NO. OR NAME');
@@ -2324,6 +2356,7 @@
         const idxDealing = getColIndex('DEALING AMOUNT');
         const idxAmtDeno = getColIndex('AMOUNT DENO');
         const idxUtr     = getColIndex('UTR / TRN NO.');
+        const idxIdAct   = getColIndex('ID ACTIVATION AMOUNT');
 
         let filtered = currentData.filter(row => {
             if (filters.statusF !== 'all' && idxStatus !== -1 && (row[idxStatus]?.toString().toUpperCase() || '') !== filters.statusF) return false;
@@ -2339,6 +2372,13 @@
             return currentData.indexOf(b) - currentData.indexOf(a);
         });
 
+        const idActivationRows = filtered.filter(row => idxIdAct !== -1 && (parseFloat(row[idxIdAct]) || 0) > 0);
+        const idActivationSerialMap = new Map();
+        let serialCounter = idActivationRows.length;
+        idActivationRows.forEach(row => {
+            idActivationSerialMap.set(currentData.indexOf(row), serialCounter--);
+        });
+
         updateStats(filtered);
 
         if (!filtered.length) {
@@ -2347,7 +2387,7 @@
         }
 
         let html = '';
-        filtered.forEach(row => {
+        filtered.forEach((row) => {
             const originalIdx = currentData.indexOf(row);
             const contactText = showSheetText(row[idxContact]).trim() || '-';
             const callPhone = normalizeWhatsAppPhone(contactText);
@@ -2368,6 +2408,9 @@
                 `<button type="button" class="action-btn btn-bell" onclick="sendWhatsAppReminder(${originalIdx})" title="Send WhatsApp Payment Reminder"><i class="fas fa-bell"></i></button>` : '';
             let smsReminderButtonHtml = (statusVal === 'PENDING' || statusVal === 'PARTIAL') ?
                 `<button type="button" class="action-btn btn-sms" onclick="sendSmsReminder(${originalIdx})" title="Send SMS Payment Reminder"><i class="fas fa-sms"></i></button>` : '';
+            const idActivationSerialNo = idActivationSerialMap.get(originalIdx) || '';
+            const idActivationButtonHtml = idActivationSerialNo ?
+                `<button type="button" class="action-btn btn-wa-direct" onclick="sendIdActivationWhatsApp(${originalIdx}, ${idActivationSerialNo})" title="Send ID Activation WhatsApp"><i class="fas fa-comment-dots"></i></button>` : '';
 
             html += `<tr>
                 <td data-label="Invoice"><strong>${row[idxInv] || '-'}</strong></td>
@@ -2382,6 +2425,7 @@
                     <div class="action-icons">
                         ${callButtonHtml}
                         <button type="button" class="action-btn btn-whatsapp" onclick="openQRAndShare(${originalIdx})" title="Share on WhatsApp"><i class="fab fa-whatsapp"></i></button>
+                        ${idActivationButtonHtml}
                         ${reminderButtonHtml}
                         ${smsReminderButtonHtml}
                         <button type="button" class="action-btn btn-print"    onclick="openPrintChoice(${originalIdx})" title="Print Invoice"><i class="fas fa-print"></i></button>
