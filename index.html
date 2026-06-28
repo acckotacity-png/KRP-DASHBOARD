@@ -1834,9 +1834,19 @@
         const display = document.getElementById(fieldId + '-display');
         document.getElementById(fieldId).value = values.join(', ');
         if (values.length > 0) { display.textContent = values.join(', '); display.classList.add('has-value'); }
-        else { display.textContent = 'Select...'; display.classList.remove('has-value'); }
+        else {
+            display.textContent = 'Select...';
+            display.classList.remove('has-value');
+            if (yearSelect) yearSelect.value = '';
+        }
     }
-    function resetNewFormMultiSelect() { setMultiSelectState('purpose', ''); setMultiSelectState('serviceRemarks', ''); }
+    function resetNewFormMultiSelect() {
+        setMultiSelectState('purpose', '');
+        setMultiSelectState('serviceRemarks', '');
+        document.getElementById('purposeYear').value = '';
+        clearValidationCache('');
+        clearValidationHighlights('');
+    }
 
     function getFinancialYearStart(date = new Date()) {
         return date.getMonth() >= 3 ? date.getFullYear() : date.getFullYear() - 1;
@@ -1938,9 +1948,10 @@
         const purposeRaw = getValidationFieldValue(prefix, 'purpose');
         const purposeParts = getPurposeValidationParts(purposeRaw);
         const purposeKey = getPurposeValidationKey(purposeRaw);
+        const loginId = normalizeValidationText(getValidationFieldValue(prefix, 'loginId'));
         const utrNo = normalizeValidationText(getValidationFieldValue(prefix, 'utrNo'));
 
-        if (!purposeKey && !utrNo) return { ok: true };
+        if (!purposeKey && !loginId && !utrNo) return { ok: true };
 
         if (purposeParts.purposes.length && !purposeParts.years.length) {
             return buildRecordConflict(
@@ -1956,6 +1967,7 @@
         if (!headers.length || !data.length) return { ok: true };
 
         const idxPurpose = getValidationColIndex(headers, 'PURPOSE');
+        const idxLogin = getValidationColIndex(headers, 'LOGIN ID');
         const idxUtr = getValidationColIndex(headers, 'UTR / TRN NO.');
         const excludedIdx = excludeRowIndex === null || excludeRowIndex === undefined || excludeRowIndex === ''
             ? null
@@ -1965,6 +1977,7 @@
             if (excludedIdx !== null && i === excludedIdx) continue;
             const row = data[i];
             const rowPurposeKey = idxPurpose !== -1 ? getPurposeValidationKey(row[idxPurpose]) : '';
+            const rowLogin = idxLogin !== -1 ? normalizeValidationText(row[idxLogin]) : '';
             const rowUtr = idxUtr !== -1 ? normalizeValidationText(row[idxUtr]) : '';
 
             if (utrNo && rowUtr && rowUtr === utrNo) {
@@ -1977,13 +1990,13 @@
                 );
             }
 
-            if (purposeKey && rowPurposeKey && rowPurposeKey === purposeKey) {
+            if (purposeKey && loginId && rowPurposeKey && rowLogin && rowPurposeKey === purposeKey && rowLogin === loginId) {
                 return buildRecordConflict(
-                    'purpose_year_duplicate',
-                    'Same Purpose + Year combination already use ho chuka hai. Please different year choose karein.',
-                    purposeKey,
-                    [`${prefix}purpose-display`, `${prefix}purposeYear`],
-                    `${prefix}purposeYear`
+                    'purpose_year_login_duplicate',
+                    'Ye Login ID + Purpose + Year combination already use ho chuka hai. Please different purpose ya year select karein.',
+                    `${loginId}|${purposeKey}`,
+                    [`${prefix}purpose-display`, `${prefix}purposeYear`, `${prefix}loginId`],
+                    `${prefix}loginId`
                 );
             }
         }
@@ -2008,27 +2021,25 @@
     }
 
     function clearValidationCache(prefix) {
-        [`${prefix}purpose-display`, `${prefix}loginId`, `${prefix}utrNo`].forEach(id => clearValidationCacheForField(id));
+        [`${prefix}purpose-display`, `${prefix}purposeYear`, `${prefix}loginId`, `${prefix}utrNo`].forEach(id => clearValidationCacheForField(id));
+    }
+
+    function clearValidationState(prefix) {
+        clearValidationCache(prefix);
+        clearValidationHighlights(prefix);
     }
 
     function bindRecordValidation(prefix) {
-        ['utrNo'].forEach(field => {
+        ['loginId', 'utrNo'].forEach(field => {
             const el = document.getElementById(`${prefix}${field}`);
             if (!el || el.dataset.validationBound === '1') return;
             const runValidation = debounce(() => {
-                const result = validateRecordEntry(prefix, prefix === 'edit_' ? document.getElementById('edit_rowId')?.value : null);
-                if (result.ok) {
-                    clearValidationHighlights(prefix);
-                    clearValidationCache(prefix);
-                    return;
-                }
-                if (result.fieldId === `${prefix}${field}`) {
-                    notifyValidationResult(result, prefix);
-                }
+                const result = validateAndNotifyRecordEntry(prefix, prefix === 'edit_' ? document.getElementById('edit_rowId')?.value : null);
+                if (result) clearValidationState(prefix);
             }, 150);
 
             el.addEventListener('input', () => {
-                clearValidationCache(prefix);
+                clearValidationState(prefix);
                 runValidation();
             });
             el.addEventListener('blur', runValidation);
