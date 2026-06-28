@@ -1149,6 +1149,7 @@
     let isTrackerRefreshInProgress = false;
     let activeLedgerKey = '';
     let activeLedgerTitle = '';
+    let currentIdActivationSerialMap = new Map();
 
     // ─── INIT ─────────────────────────────────────────────────────
     function getLocalISODate(dateObj) {
@@ -1175,6 +1176,48 @@
         }
         if (!d || isNaN(d)) return '';
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function getRowMonthKey(row, idxDate = getColIndex('DATE')) {
+        const rowDate = idxDate !== -1 ? getLocalISODate(row[idxDate]) : '';
+        return rowDate ? rowDate.slice(0, 7) : '';
+    }
+
+    function buildIdActivationSerialMap(rows = currentData) {
+        const idxDate = getColIndex('DATE');
+        const idxIdAct = getColIndex('ID ACTIVATION AMOUNT');
+        const monthGroups = new Map();
+
+        rows.forEach((row, rowIndex) => {
+            if (idxIdAct === -1) return;
+            const idAmount = parseFloat(row[idxIdAct]) || 0;
+            if (idAmount <= 0) return;
+            const monthKey = getRowMonthKey(row, idxDate);
+            if (!monthKey) return;
+            if (!monthGroups.has(monthKey)) monthGroups.set(monthKey, []);
+            monthGroups.get(monthKey).push({
+                rowIndex,
+                dateKey: idxDate !== -1 ? (getLocalISODate(row[idxDate]) || '') : '',
+            });
+        });
+
+        const serialMap = new Map();
+        monthGroups.forEach(items => {
+            items.sort((a, b) => {
+                if (a.dateKey !== b.dateKey) return b.dateKey.localeCompare(a.dateKey);
+                return b.rowIndex - a.rowIndex;
+            });
+            let serial = items.length;
+            items.forEach(item => {
+                serialMap.set(item.rowIndex, serial--);
+            });
+        });
+
+        return serialMap;
+    }
+
+    function getIdActivationSerialNo(rowIndex) {
+        return currentIdActivationSerialMap.get(rowIndex) || '';
     }
     function formatDisplayDate(dateObj) {
         const isoDate = getLocalISODate(dateObj);
@@ -1462,6 +1505,7 @@
         select.innerHTML = '<option value="all" selected>All Months</option>';
         if (dashboardSelect) dashboardSelect.innerHTML = '<option value="all" selected>All Months</option>';
         if (recordsSelect) recordsSelect.innerHTML = '<option value="all" selected>All Months</option>';
+        let currentMonthValue = '';
         for (let i = 0; i < 6; i++) {
             let d = new Date(now.getFullYear(), now.getMonth() - i, 1);
             let val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
@@ -1469,7 +1513,9 @@
             select.innerHTML += `<option value="${val}">${txt}</option>`;
             if (dashboardSelect) dashboardSelect.innerHTML += `<option value="${val}">${txt}</option>`;
             if (recordsSelect) recordsSelect.innerHTML += `<option value="${val}">${txt}</option>`;
+            if (i === 0) currentMonthValue = val;
         }
+        if (currentMonthValue) select.value = currentMonthValue;
     }
 
     function getRelativeLocalISODate(offsetDays = 0) {
@@ -1658,8 +1704,13 @@
     function sendIdActivationWhatsApp(rowIndex, serialNo = '') {
         const record = currentData[rowIndex];
         if (!record) return;
-        const phone = '919039779483';
-        const message = buildIdActivationWhatsAppMessage(record, serialNo || (rowIndex + 1));
+        const phone = '916367327414';
+        const serial = serialNo || getIdActivationSerialNo(rowIndex);
+        if (!serial) {
+            showMessage('ID serial not ready for this record', 'error');
+            return;
+        }
+        const message = buildIdActivationWhatsAppMessage(record, serial);
         window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`, '_blank');
         showMessage('ID Activation WhatsApp message ready', 'success');
     }
@@ -2372,12 +2423,7 @@
             return currentData.indexOf(b) - currentData.indexOf(a);
         });
 
-        const idActivationRows = filtered.filter(row => idxIdAct !== -1 && (parseFloat(row[idxIdAct]) || 0) > 0);
-        const idActivationSerialMap = new Map();
-        let serialCounter = idActivationRows.length;
-        idActivationRows.forEach(row => {
-            idActivationSerialMap.set(currentData.indexOf(row), serialCounter--);
-        });
+        currentIdActivationSerialMap = buildIdActivationSerialMap(currentData);
 
         updateStats(filtered);
 
@@ -2408,7 +2454,7 @@
                 `<button type="button" class="action-btn btn-bell" onclick="sendWhatsAppReminder(${originalIdx})" title="Send WhatsApp Payment Reminder"><i class="fas fa-bell"></i></button>` : '';
             let smsReminderButtonHtml = (statusVal === 'PENDING' || statusVal === 'PARTIAL') ?
                 `<button type="button" class="action-btn btn-sms" onclick="sendSmsReminder(${originalIdx})" title="Send SMS Payment Reminder"><i class="fas fa-sms"></i></button>` : '';
-            const idActivationSerialNo = idActivationSerialMap.get(originalIdx) || '';
+            const idActivationSerialNo = getIdActivationSerialNo(originalIdx);
             const idActivationButtonHtml = idActivationSerialNo ?
                 `<button type="button" class="action-btn btn-wa-direct" onclick="sendIdActivationWhatsApp(${originalIdx}, ${idActivationSerialNo})" title="Send ID Activation WhatsApp"><i class="fas fa-comment-dots"></i></button>` : '';
 
