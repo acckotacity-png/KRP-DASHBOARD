@@ -596,15 +596,6 @@
                     <option value="monthly">Monthly View</option>
                     <option value="daily">Daily View</option>
                 </select>
-                <select id="recordsStatusFilter" class="filter-select" onchange="handleRecordsTrackerChange()">
-                    <option value="all">All Status</option>
-                    <option value="SUCCESS">Success</option>
-                    <option value="PENDING">Pending</option>
-                    <option value="PARTIAL">Partial Paid</option>
-                    <option value="FAILED">Failed</option>
-                    <option value="REFUND">Refund</option>
-                    <option value="ADVANCE">Advance</option>
-                </select>
                 <select id="recordsMonthFilter" class="filter-select" onchange="handleRecordsTrackerChange()">
                     <option value="all">All Months</option>
                 </select>
@@ -624,11 +615,11 @@
                 <table id="recordsTrackerTable">
                     <thead>
                         <tr>
-                            <th>Date</th><th>Month</th><th>Total ID</th><th>Working Amount</th><th>Transfer Amt</th><th>Remaining Amt</th><th>Monthly Amount</th><th>Other Data Setup &amp; Uploading</th><th>Transfer Date / Details</th><th>Remarks</th><th>Actions</th>
+                            <th>Date</th><th>Month</th><th>Total ID</th><th>Working Amount</th><th>Transfer Amt</th><th>Monthly Amount</th><th>Setup Amount</th><th>Remarks</th><th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="recordsTrackerBody">
-                        <tr><td colspan="11" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                        <tr><td colspan="9" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -645,55 +636,33 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label class="required">Date</label>
-                        <input type="date" id="add_record_date" required onchange="syncAddRecordMonth()">
+                        <input type="text" id="add_record_date" placeholder="DD-MM-YYYY" onchange="syncAddRecordMonthOptions()" required>
                     </div>
                     <div class="form-group">
                         <label>Month</label>
-                        <input type="text" id="add_record_month" placeholder="Aug-26">
+                        <select id="add_record_month"></select>
                     </div>
                     <div class="form-group">
                         <label class="required">Total ID</label>
                         <input type="number" id="add_record_totalId" step="1" min="0" required>
                     </div>
                     <div class="form-group">
-                        <label>Status</label>
-                        <select id="add_record_status">
-                            <option value="PENDING">Pending</option>
-                            <option value="SUCCESS">Success</option>
-                            <option value="PARTIAL">Partial Paid</option>
-                            <option value="FAILED">Failed</option>
-                            <option value="REFUND">Refund</option>
-                            <option value="ADVANCE">Advance</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
                         <label class="required">Working Amount</label>
-                        <input type="number" id="add_record_working" step="0.01" min="0" required oninput="calcAddRecordRemaining()">
+                        <input type="number" id="add_record_working" step="0.01" min="0" required>
                     </div>
                     <div class="form-group">
                         <label class="required">Transfer Amt</label>
-                        <input type="number" id="add_record_transfer" step="0.01" min="0" required oninput="calcAddRecordRemaining()">
+                        <input type="number" id="add_record_transfer" step="0.01" min="0" required>
                     </div>
                     <div class="form-group">
-                        <label>Total Pending Amt</label>
-                        <input type="number" id="add_record_pending" step="0.01" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label>Remaining Amt</label>
-                        <input type="number" id="add_record_remaining" step="0.01" readonly>
                     </div>
                     <div class="form-group">
                         <label class="required">Monthly Amount</label>
-                        <input type="number" id="add_record_monthly" step="0.01" min="0" required oninput="calcAddRecordRemaining()">
+                        <input type="number" id="add_record_monthly" step="0.01" min="0" required>
                     </div>
                     <div class="form-group">
-                        <label class="required">Other Data Setup &amp; Uploading</label>
-                        <input type="number" id="add_record_setup" step="0.01" min="0" required oninput="calcAddRecordRemaining()">
-                    </div>
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label>Transfer Date / Details</label>
-                        <textarea id="add_record_transferDetails" class="records-cell-input records-textarea" placeholder="01-06-26: ₹5000, 03-06-26: ₹2500"></textarea>
-                        <div class="records-note">Format: `DD-MM-YY: amount` or `date: amount`. Multiple partial transfers can be separated by comma.</div>
+                        <label class="required">Setup Amount</label>
+                        <input type="number" id="add_record_setup" step="0.01" min="0" required>
                     </div>
                     <div class="form-group" style="grid-column: 1 / -1;">
                         <label>Remarks</label>
@@ -1144,6 +1113,7 @@
     const RECORDS_TRACKER_ARCHIVE_KEY = 'krp_records_tracker_archive_v1';
 
     let currentData = [], currentHeaders = [], isMobileView = false;
+    let recordsCurrentData = [], recordsCurrentHeaders = [], recordsCurrentRowNumbers = [], isRecordsRefreshInProgress = false;
     let currentQRPayload = null;
     let currentQRCanvas = null;
     let selectedRowForPrint = null;
@@ -1241,6 +1211,7 @@
         if (window.innerWidth < 768) toggleViewMode();
         switchTab('form');
         loadTrackerData(true);
+        loadRecordsTrackerData(true);
     };
 
     // ─── VYAPAR SETTINGS LOGIC ────────────────────────────────────
@@ -1488,7 +1459,7 @@
             document.body.classList.remove('form-view');
             document.getElementById('recordsTab').classList.add('active');
             document.querySelector('[data-tab="records"]').classList.add('active');
-            renderRecordsTracker();
+            loadRecordsTrackerData(false);
         } else {
             document.body.classList.remove('form-view');
             document.getElementById('trackerTab').classList.add('active');
@@ -1511,9 +1482,10 @@
             let d = new Date(now.getFullYear(), now.getMonth() - i, 1);
             let val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
             let txt = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+            let recordsVal = d.toLocaleString('default', { month: 'short', year: 'numeric' }).replace(/\s+/g, '-');
             select.innerHTML += `<option value="${val}">${txt}</option>`;
             if (dashboardSelect) dashboardSelect.innerHTML += `<option value="${val}">${txt}</option>`;
-            if (recordsSelect) recordsSelect.innerHTML += `<option value="${val}">${txt}</option>`;
+            if (recordsSelect) recordsSelect.innerHTML += `<option value="${recordsVal}">${recordsVal}</option>`;
             if (i === 0) currentMonthValue = val;
         }
         if (currentMonthValue) select.value = currentMonthValue;
@@ -1705,7 +1677,7 @@
     function sendIdActivationWhatsApp(rowIndex, serialNo = '') {
         const record = currentData[rowIndex];
         if (!record) return;
-        const phone = '919039779483';
+        const phone = '916367327414';
         const serial = serialNo || getIdActivationSerialNo(rowIndex);
         if (!serial) {
             showMessage('ID serial not ready for this record', 'error');
@@ -2307,21 +2279,7 @@
     }
 
     async function loadTrackerData(forceRefresh = false) {
-        const filters = getTrackerFilters();
-
-        if (!currentData.length) {
-            const cached = readTrackerCache();
-            if (cached) applyTrackerData(cached.headers, cached.data);
-        }
-
-        if (currentData.length) {
-            renderTable(filters);
-            if (forceRefresh) refreshTrackerDataInBackground(true);
-            return;
-        }
-
-        document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Loading Data...</td></tr>';
-        await refreshTrackerDataInBackground(true);
+        return loadTrackerDataLegacy(forceRefresh);
     }
 
     // ─── RENDER TABLE ─────────────────────────────────────────────
@@ -2927,8 +2885,8 @@
             const transferDetailsId = getRecordsRowDomId(r.rowKey, 'transferDetails');
             const remarksId = getRecordsRowDomId(r.rowKey, 'remarks');
             return `<tr>
-                <td><input class="records-cell-input" type="date" id="${dateId}" value="${escapeHtml(r.date)}" onchange="updateRecordsTrackerCell('${r.rowKey}','date',this.value)"></td>
-                <td><input class="records-cell-input" type="text" id="${monthId}" value="${escapeHtml(r.month)}" onchange="updateRecordsTrackerCell('${r.rowKey}','month',this.value)"></td>
+                <td><input class="records-cell-input" type="text" id="${dateId}" value="${escapeHtml(r.date)}" placeholder="DD-MM-YYYY" onchange="handleRecordsDateChange('${r.rowKey}', this.value)"></td>
+                <td><select class="records-cell-input" id="${monthId}" onchange="updateRecordsTrackerCell('${r.rowKey}','month',this.value)">${buildRecordsMonthOptions_(r.date || '', normalizeRecordsMonthDisplay_(r.month, r.date))}</select></td>
                 <td><input class="records-cell-input" type="number" step="1" id="${totalId}" value="${escapeHtml(r.totalId)}" onchange="updateRecordsTrackerCell('${r.rowKey}','totalId',this.value)"></td>
                 <td><input class="records-cell-input" type="number" step="0.01" id="${workingId}" value="${escapeHtml(r.working)}" onchange="updateRecordsTrackerCell('${r.rowKey}','working',this.value)"></td>
                 <td><input class="records-cell-input" type="number" step="0.01" id="${transferId}" value="${escapeHtml(r.transfer)}" onchange="updateRecordsTrackerCell('${r.rowKey}','transfer',this.value)"></td>
@@ -3615,6 +3573,811 @@
     }
 
     // ─── MESSAGES ─────────────────────────────────────────────────
+    // â”€â”€â”€ SHEET2 RECORDS TRACKER OVERRIDE â”€â”€â”€â€”â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function getRecordsColIndex(name) {
+        return recordsCurrentHeaders.findIndex(h => h && h.toString().trim().toUpperCase() === name.toUpperCase());
+    }
+
+    function getRecordsTrackerFilters() {
+        return {
+            viewMode: document.getElementById('recordsViewMode')?.value || 'monthly',
+            monthF: document.getElementById('recordsMonthFilter')?.value || 'all',
+            dateMode: document.getElementById('recordsDateFilterMode')?.value || 'all',
+            dateValue: document.getElementById('recordsDateFilterValue')?.value || ''
+        };
+    }
+
+    function recordsRowMatchesFilters(row, idxDate, filters) {
+        if (idxDate === -1) return true;
+        const rowDate = getLocalISODate(row[idxDate]);
+        if (!rowDate) return false;
+        if (filters.dateMode === 'today' || filters.dateMode === 'yesterday' || filters.dateMode === 'datewise') {
+            const targetDate = filters.dateMode === 'today' ? getRelativeLocalISODate(0)
+                : filters.dateMode === 'yesterday' ? getRelativeLocalISODate(-1)
+                : filters.dateValue;
+            return targetDate ? rowDate === targetDate : false;
+        }
+        if (filters.monthF !== 'all') return rowDate.startsWith(filters.monthF);
+        return true;
+    }
+
+    function loadRecordsTrackerData(forceRefresh = false) {
+        if (isRecordsRefreshInProgress) return;
+        if (!forceRefresh && recordsCurrentData.length) {
+            renderRecordsTracker();
+            return;
+        }
+        const body = document.getElementById('recordsTrackerBody');
+        if (body) body.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Loading Records...</td></tr>';
+        isRecordsRefreshInProgress = true;
+        fetch(`${APPS_SCRIPT_URL}?action=getRecordsData&t=${Date.now()}`)
+            .then(r => r.json())
+            .then(result => {
+                if (result && result.success) {
+                    recordsCurrentHeaders = Array.isArray(result.headers) ? result.headers : [];
+                    recordsCurrentData = Array.isArray(result.data) ? result.data : [];
+                    recordsCurrentRowNumbers = Array.isArray(result.rowNumbers) ? result.rowNumbers : recordsCurrentData.map((_, i) => i + 2);
+                    renderRecordsTracker();
+                } else {
+                    recordsCurrentHeaders = [];
+                    recordsCurrentData = [];
+                    recordsCurrentRowNumbers = [];
+                    if (body) body.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:24px;">No records found</td></tr>';
+                }
+            })
+            .catch(() => {
+                if (body) body.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:24px;">Connection error</td></tr>';
+            })
+            .finally(() => { isRecordsRefreshInProgress = false; });
+    }
+
+    function getRecordsFilteredRows() {
+        if (!recordsCurrentHeaders.length) return [];
+        const filters = getRecordsTrackerFilters();
+        const idxDate = getRecordsColIndex('DATE');
+        const idxMonth = getRecordsColIndex('MONTH');
+        return recordsCurrentData.map((row, index) => {
+            const rowNumber = recordsCurrentRowNumbers[index] || index + 2;
+            const dateKey = idxDate !== -1 ? getLocalISODate(row[idxDate]) : '';
+            const monthKey = idxMonth !== -1 ? (row[idxMonth] || '').toString().trim().toLowerCase() : '';
+            return { row, rowNumber, dateKey, monthKey };
+        }).filter(entry => recordsRowMatchesFilters(entry.row, idxDate, filters)).sort((a, b) => {
+            if (filters.viewMode === 'monthly') {
+                const monthA = a.monthKey || a.dateKey.slice(0, 7);
+                const monthB = b.monthKey || b.dateKey.slice(0, 7);
+                if (monthA !== monthB) return monthB.localeCompare(monthA);
+            }
+            if (a.dateKey !== b.dateKey) return b.dateKey.localeCompare(a.dateKey);
+            return b.rowNumber - a.rowNumber;
+        });
+    }
+
+    function openAddRecordsModal() {
+        const modal = document.getElementById('addRecordsModal');
+        if (!modal) return;
+        document.getElementById('addRecordsForm').reset();
+        document.getElementById('add_record_date').value = getLocalISODate(new Date());
+        syncAddRecordMonth();
+        calcAddRecordRemaining();
+        modal.classList.add('active');
+    }
+
+    function closeAddRecordsModal() {
+        document.getElementById('addRecordsModal')?.classList.remove('active');
+    }
+
+    function syncAddRecordMonth() {
+        const dateVal = document.getElementById('add_record_date')?.value || '';
+        const monthEl = document.getElementById('add_record_month');
+        if (!monthEl || !dateVal) return;
+        const d = new Date(dateVal + 'T00:00:00');
+        monthEl.value = d.toLocaleString('default', { month: 'short', year: '2-digit' });
+    }
+
+    function calcAddRecordRemaining() {
+        const working = normalizeRecordNumber(document.getElementById('add_record_working')?.value);
+        const transfer = normalizeRecordNumber(document.getElementById('add_record_transfer')?.value);
+        const monthly = normalizeRecordNumber(document.getElementById('add_record_monthly')?.value);
+        const remaining = Math.max(working - transfer - monthly, 0);
+        const remainingEl = document.getElementById('add_record_remaining');
+        if (remainingEl) remainingEl.value = remaining.toFixed(2);
+    }
+
+    async function submitAddRecordsEntry(event) {
+        event.preventDefault();
+        const date = document.getElementById('add_record_date').value;
+        if (!date) return;
+        const month = document.getElementById('add_record_month').value.trim() || (() => {
+            const d = new Date(date + 'T00:00:00');
+            return d.toLocaleString('default', { month: 'short', year: '2-digit' });
+        })();
+        const payload = new URLSearchParams();
+        payload.append('action', 'addRecord');
+        payload.append('date', date);
+        payload.append('month', month);
+        payload.append('totalId', document.getElementById('add_record_totalId').value || '0');
+        payload.append('working', document.getElementById('add_record_working').value || '0');
+        payload.append('transfer', document.getElementById('add_record_transfer').value || '0');
+        payload.append('monthly', document.getElementById('add_record_monthly').value || '0');
+        payload.append('setup', document.getElementById('add_record_setup').value || '0');
+        payload.append('remarks', document.getElementById('add_record_remarks').value.trim());
+        try {
+            showMessage('Saving record...', 'pending');
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload });
+            const result = await response.json();
+            if (result.success) {
+                closeAddRecordsModal();
+                await loadRecordsTrackerData(true);
+                showMessage(result.message || 'New record added', 'success');
+            } else {
+                showMessage(result.message || 'Save failed', 'error');
+            }
+        } catch (error) {
+            showMessage('Network error', 'error');
+        }
+    }
+
+    async function updateRecordsTrackerCell(rowNumber, field, value) {
+        const payload = new URLSearchParams();
+        payload.append('action', 'updateRecordField');
+        payload.append('row', rowNumber);
+        payload.append('field', field);
+        payload.append('value', value);
+        try {
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload });
+            const result = await response.json();
+            if (result.success) {
+                await loadRecordsTrackerData(true);
+            } else {
+                showMessage(result.message || 'Update failed', 'error');
+            }
+        } catch (error) {
+            showMessage('Network error', 'error');
+        }
+    }
+
+    async function saveRecordsTrackerRow(rowNumber) {
+        const payload = new URLSearchParams();
+        payload.append('action', 'updateRecord');
+        payload.append('row', rowNumber);
+        payload.append('date', document.getElementById(getRecordsRowDomId(rowNumber, 'date'))?.value || '');
+        payload.append('month', document.getElementById(getRecordsRowDomId(rowNumber, 'month'))?.value || '');
+        payload.append('totalId', document.getElementById(getRecordsRowDomId(rowNumber, 'totalId'))?.value || '0');
+        payload.append('working', document.getElementById(getRecordsRowDomId(rowNumber, 'working'))?.value || '0');
+        payload.append('transfer', document.getElementById(getRecordsRowDomId(rowNumber, 'transfer'))?.value || '0');
+        payload.append('monthly', document.getElementById(getRecordsRowDomId(rowNumber, 'monthly'))?.value || '0');
+        payload.append('setup', document.getElementById(getRecordsRowDomId(rowNumber, 'setup'))?.value || '0');
+        payload.append('remarks', document.getElementById(getRecordsRowDomId(rowNumber, 'remarks'))?.value || '');
+        try {
+            showMessage('Updating...', 'pending');
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload });
+            const result = await response.json();
+            if (result.success) {
+                await loadRecordsTrackerData(true);
+                showMessage('Record updated', 'success');
+            } else {
+                showMessage(result.message || 'Update failed', 'error');
+            }
+        } catch (error) {
+            showMessage('Network error', 'error');
+        }
+    }
+
+    async function deleteRecordsTrackerRow(rowNumber) {
+        if (!confirm('Delete this record from Records Tracker?')) return;
+        const payload = new URLSearchParams();
+        payload.append('action', 'deleteRecord');
+        payload.append('row', rowNumber);
+        try {
+            showMessage('Deleting...', 'pending');
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload });
+            const result = await response.json();
+            if (result.success) {
+                await loadRecordsTrackerData(true);
+                showMessage('Record deleted', 'success');
+            } else {
+                showMessage(result.message || 'Delete failed', 'error');
+            }
+        } catch (error) {
+            showMessage('Network error', 'error');
+        }
+    }
+
+    function renderRecordsTracker() {
+        const body = document.getElementById('recordsTrackerBody');
+        const cards = document.getElementById('recordsSummaryCards');
+        if (!body || !cards) return;
+
+        const rows = getRecordsFilteredRows();
+        const idxTotalId = getRecordsColIndex('TOTAL ID');
+        const idxWorking = getRecordsColIndex('WORKING AMOUNT');
+        const idxTransfer = getRecordsColIndex('TRANSFER AMT');
+        const idxMonthly = getRecordsColIndex('MONTHLY AMT');
+        const idxSetup = getRecordsColIndex('SETUP AMOUNT');
+        const idxRemarks = getRecordsColIndex('REMARKS');
+        const idxDate = getRecordsColIndex('DATE');
+        const idxMonth = getRecordsColIndex('MONTH');
+
+        const totalIds = rows.reduce((sum, entry) => sum + normalizeRecordNumber(entry.row[idxTotalId]), 0);
+        const totalWorking = rows.reduce((sum, entry) => sum + normalizeRecordNumber(entry.row[idxWorking]), 0);
+        const totalTransfer = rows.reduce((sum, entry) => sum + normalizeRecordNumber(entry.row[idxTransfer]), 0);
+        const totalRemaining = rows.reduce((sum, entry) => {
+            const working = normalizeRecordNumber(entry.row[idxWorking]);
+            const transfer = normalizeRecordNumber(entry.row[idxTransfer]);
+            const monthly = normalizeRecordNumber(entry.row[idxMonthly]);
+            return sum + Math.max(working - transfer - monthly, 0);
+        }, 0);
+
+        cards.innerHTML = [
+            ['Rows', rows.length],
+            ['Total ID', totalIds],
+            ['Working Amt', formatMoney(totalWorking)],
+            ['Transfer Amt', formatMoney(totalTransfer)],
+            ['Remaining Amt', formatMoney(totalRemaining)]
+        ].map(item => `<div class="records-summary-card"><span>${item[0]}</span><strong>${item[1]}</strong></div>`).join('');
+
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:24px;">No records found</td></tr>';
+            return;
+        }
+
+        body.innerHTML = rows.map(entry => {
+            const row = entry.row;
+            const rowNumber = entry.rowNumber;
+            const dateId = getRecordsRowDomId(rowNumber, 'date');
+            const monthId = getRecordsRowDomId(rowNumber, 'month');
+            const totalId = getRecordsRowDomId(rowNumber, 'totalId');
+            const workingId = getRecordsRowDomId(rowNumber, 'working');
+            const transferId = getRecordsRowDomId(rowNumber, 'transfer');
+            const remainingId = getRecordsRowDomId(rowNumber, 'remaining');
+            const monthlyId = getRecordsRowDomId(rowNumber, 'monthly');
+            const setupId = getRecordsRowDomId(rowNumber, 'setup');
+            const remarksId = getRecordsRowDomId(rowNumber, 'remarks');
+            const dateVal = idxDate !== -1 ? formatRecordsDate_(row[idxDate]) : '';
+            const monthVal = idxMonth !== -1 ? normalizeRecordsMonthDisplay_(row[idxMonth], row[idxDate]) : '';
+            const totalIdVal = idxTotalId !== -1 ? getRecordsDisplayValue(row[idxTotalId]) : '0';
+            const workingVal = idxWorking !== -1 ? getRecordsDisplayValue(row[idxWorking]) : '0';
+            const transferVal = idxTransfer !== -1 ? getRecordsDisplayValue(row[idxTransfer]) : '0';
+            const monthlyVal = idxMonthly !== -1 ? getRecordsDisplayValue(row[idxMonthly]) : '0';
+            const setupVal = idxSetup !== -1 ? getRecordsDisplayValue(row[idxSetup]) : '0';
+            const remainingVal = Math.max(normalizeRecordNumber(workingVal) - normalizeRecordNumber(transferVal) - normalizeRecordNumber(monthlyVal), 0);
+            const remarksVal = idxRemarks !== -1 ? (row[idxRemarks] || '') : '';
+            return `<tr>
+                <td><input class="records-cell-input" type="text" id="${dateId}" value="${escapeHtml(dateVal)}" placeholder="DD-MM-YYYY" onchange="handleRecordsDateChange(${rowNumber}, this.value)"></td>
+                <td><select class="records-cell-input" id="${monthId}" onchange="updateRecordsTrackerCell(${rowNumber},'month',this.value)">${buildRecordsMonthOptions_(dateVal || row[idxDate], monthVal)}</select></td>
+                <td><input class="records-cell-input" type="number" step="1" id="${totalId}" value="${escapeHtml(totalIdVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'totalId',this.value)"></td>
+                <td><input class="records-cell-input" type="number" step="0.01" id="${workingId}" value="${escapeHtml(workingVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'working',this.value)"></td>
+                <td><input class="records-cell-input" type="number" step="0.01" id="${transferId}" value="${escapeHtml(transferVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'transfer',this.value)"></td>
+                <td><input class="records-cell-input" type="number" step="0.01" id="${remainingId}" value="${escapeHtml(remainingVal)}" readonly></td>
+                <td><input class="records-cell-input" type="number" step="0.01" id="${monthlyId}" value="${escapeHtml(monthlyVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'monthly',this.value)"></td>
+                <td><input class="records-cell-input" type="number" step="0.01" id="${setupId}" value="${escapeHtml(setupVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'setup',this.value)"></td>
+                <td><textarea class="records-cell-input records-textarea" id="${remarksId}" onchange="updateRecordsTrackerCell(${rowNumber},'remarks',this.value)">${escapeHtml(remarksVal)}</textarea></td>
+                <td>
+                    <div class="records-row-actions">
+                        <button type="button" class="records-action-btn update" onclick="saveRecordsTrackerRow(${rowNumber})">Update</button>
+                        <button type="button" class="records-action-btn delete" onclick="deleteRecordsTrackerRow(${rowNumber})">Delete</button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function exportRecordsTrackerCsv() {
+        const rows = getRecordsFilteredRows();
+        if (!rows.length) return alert('No records to export');
+        const idxDate = getRecordsColIndex('DATE');
+        const idxMonth = getRecordsColIndex('MONTH');
+        const idxTotalId = getRecordsColIndex('TOTAL ID');
+        const idxWorking = getRecordsColIndex('WORKING AMOUNT');
+        const idxTransfer = getRecordsColIndex('TRANSFER AMT');
+        const idxMonthly = getRecordsColIndex('MONTHLY AMT');
+        const idxSetup = getRecordsColIndex('SETUP AMOUNT');
+        const idxRemarks = getRecordsColIndex('REMARKS');
+        const headers = ['Date', 'Month', 'Total ID', 'Working Amount', 'Transfer Amt', 'Remaining Amt', 'Monthly Amount', 'Setup Amount', 'Remarks'];
+        const csvRows = rows.map(entry => {
+            const row = entry.row;
+            const working = normalizeRecordNumber(idxWorking !== -1 ? row[idxWorking] : 0);
+            const transfer = normalizeRecordNumber(idxTransfer !== -1 ? row[idxTransfer] : 0);
+            const monthly = normalizeRecordNumber(idxMonthly !== -1 ? row[idxMonthly] : 0);
+            const remaining = Math.max(working - transfer - monthly, 0);
+            return [
+                idxDate !== -1 ? getLocalISODate(row[idxDate]) : '',
+                idxMonth !== -1 ? row[idxMonth] : '',
+                idxTotalId !== -1 ? row[idxTotalId] : '',
+                working,
+                transfer,
+                remaining,
+                monthly,
+                idxSetup !== -1 ? row[idxSetup] : '',
+                idxRemarks !== -1 ? row[idxRemarks] : ''
+            ];
+        });
+        downloadCsvCustom(`KRP_Records_Tracker_${getLocalISODate(new Date())}.csv`, headers, csvRows);
+    }
+
+    function handleRecordsDateFilterChange() {
+        updateRecordsDateFilterVisibility();
+        renderRecordsTracker();
+    }
+
+    function handleRecordsTrackerChange() {
+        renderRecordsTracker();
+    }
+
+    function resetRecordsTrackerFilters() {
+        const view = document.getElementById('recordsViewMode');
+        const month = document.getElementById('recordsMonthFilter');
+        const mode = document.getElementById('recordsDateFilterMode');
+        const value = document.getElementById('recordsDateFilterValue');
+        if (view) view.value = 'monthly';
+        if (month) month.value = 'all';
+        if (mode) mode.value = 'all';
+        if (value) value.value = getRelativeLocalISODate(0);
+        updateRecordsDateFilterVisibility();
+        renderRecordsTracker();
+    }
+
+    const RECORDS_MONTH_FORMAT = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' });
+
+    function getRecordsColIndex(name) {
+        return recordsCurrentHeaders.findIndex(h => h && h.toString().trim().toUpperCase() === name.toUpperCase());
+    }
+
+    function parseRecordsDate_(value) {
+        if (!value) return null;
+        if (value instanceof Date && !isNaN(value.getTime())) return value;
+        const text = value.toString().trim();
+        if (!text) return null;
+        const ddmmyyyy = text.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+        if (ddmmyyyy) {
+            const d = new Date(Number(ddmmyyyy[3]), Number(ddmmyyyy[2]) - 1, Number(ddmmyyyy[1]));
+            return isNaN(d.getTime()) ? null : d;
+        }
+        const isoDate = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (isoDate) {
+            const d = new Date(Number(isoDate[1]), Number(isoDate[2]) - 1, Number(isoDate[3]));
+            return isNaN(d.getTime()) ? null : d;
+        }
+        const parsed = new Date(text);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function formatRecordsDate_(value) {
+        const date = parseRecordsDate_(value);
+        if (!date) return '';
+        const dd = String(date.getDate()).padStart(2, '0');
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        return `${dd}-${mm}-${date.getFullYear()}`;
+    }
+
+    function toDateInputValue_(value) {
+        const date = parseRecordsDate_(value);
+        if (!date) return '';
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function formatRecordsMonth_(value) {
+        const date = parseRecordsDate_(value);
+        if (!date) return '';
+        return RECORDS_MONTH_FORMAT.format(date).replace(/\s+/g, '-');
+    }
+
+    function getRecordsDisplayValue(value, fallback = '0') {
+        if (value === null || value === undefined || value === '') return fallback;
+        return value;
+    }
+
+    function normalizeRecordsMonthDisplay_(monthValue, dateValue) {
+        const direct = (monthValue || '').toString().trim();
+        if (/^[A-Za-z]{3}-\d{4}$/.test(direct)) return direct;
+        const formatted = formatRecordsMonth_(direct);
+        if (formatted) return formatted;
+        return formatRecordsMonth_(dateValue) || direct;
+    }
+
+    function buildRecordsDateOptions_(dateValue, selectedValue) {
+        const baseDate = parseRecordsDate_(dateValue) || new Date();
+        const selected = (selectedValue || '').trim();
+        const seen = new Set();
+        const options = [];
+        for (let offset = -90; offset <= 90; offset++) {
+            const d = new Date(baseDate);
+            d.setDate(d.getDate() + offset);
+            const label = formatRecordsDate_(d);
+            seen.add(label);
+            const isSelected = selected ? selected === label : offset === 0;
+            options.push(`<option value="${label}"${isSelected ? ' selected' : ''}>${label}</option>`);
+        }
+        if (selected && !seen.has(selected)) {
+            options.unshift(`<option value="${selected}" selected>${selected}</option>`);
+        }
+        return options.join('');
+    }
+
+    function setRecordsDateOptions(selectEl, dateValue, selectedValue) {
+        if (!selectEl) return;
+        selectEl.innerHTML = buildRecordsDateOptions_(dateValue, selectedValue);
+    }
+
+    function shiftRecordsMonth_(date, offset) {
+        return new Date(date.getFullYear(), date.getMonth() + offset, 1);
+    }
+
+    function buildRecordsMonthOptions_(dateValue, selectedValue) {
+        const baseDate = parseRecordsDate_(dateValue) || new Date();
+        const selected = (selectedValue || '').trim();
+        const seen = new Set();
+        const options = [];
+        for (let offset = -3; offset <= 3; offset++) {
+            const monthDate = shiftRecordsMonth_(baseDate, offset);
+            const label = RECORDS_MONTH_FORMAT.format(monthDate).replace(/\s+/g, '-');
+            seen.add(label.toLowerCase());
+            const isSelected = selected ? selected === label : offset === 0;
+            options.push(`<option value="${label}"${isSelected ? ' selected' : ''}>${label}</option>`);
+        }
+        if (selected && !seen.has(selected.toLowerCase())) {
+            options.unshift(`<option value="${selected}" selected>${selected}</option>`);
+        }
+        return options.join('');
+    }
+
+    function setRecordsMonthOptions(selectEl, dateValue, selectedValue) {
+        if (!selectEl) return;
+        selectEl.innerHTML = buildRecordsMonthOptions_(dateValue, selectedValue);
+    }
+
+    function getRecordsTrackerFilters() {
+        return {
+            viewMode: document.getElementById('recordsViewMode')?.value || 'monthly',
+            monthF: document.getElementById('recordsMonthFilter')?.value || 'all',
+            dateMode: document.getElementById('recordsDateFilterMode')?.value || 'all',
+            dateValue: document.getElementById('recordsDateFilterValue')?.value || ''
+        };
+    }
+
+    function recordsRowMatchesFilters(row, idxDate, filters) {
+        if (idxDate === -1) return true;
+        const rowDate = parseRecordsDate_(row[idxDate]);
+        if (!rowDate) return false;
+        if (filters.dateMode === 'today' || filters.dateMode === 'yesterday' || filters.dateMode === 'datewise') {
+            const targetDate = filters.dateMode === 'today' ? parseRecordsDate_(getRelativeLocalISODate(0))
+                : filters.dateMode === 'yesterday' ? parseRecordsDate_(getRelativeLocalISODate(-1))
+                : parseRecordsDate_(filters.dateValue);
+            return targetDate ? formatRecordsDate_(rowDate) === formatRecordsDate_(targetDate) : false;
+        }
+        if (filters.monthF !== 'all') {
+            return formatRecordsMonth_(rowDate).toLowerCase() === filters.monthF.toString().trim().toLowerCase();
+        }
+        return true;
+    }
+
+    function loadRecordsTrackerData(forceRefresh = false) {
+        if (isRecordsRefreshInProgress) return;
+        if (!forceRefresh && recordsCurrentData.length) {
+            renderRecordsTracker();
+            return;
+        }
+        const body = document.getElementById('recordsTrackerBody');
+        if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Loading Records...</td></tr>';
+        isRecordsRefreshInProgress = true;
+        fetch(`${APPS_SCRIPT_URL}?action=getRecordsData&t=${Date.now()}`)
+            .then(r => r.json())
+            .then(result => {
+                if (result && result.success) {
+                    recordsCurrentHeaders = Array.isArray(result.headers) ? result.headers : [];
+                    recordsCurrentData = Array.isArray(result.data) ? result.data : [];
+                    recordsCurrentRowNumbers = Array.isArray(result.rowNumbers) ? result.rowNumbers : recordsCurrentData.map((_, i) => i + 2);
+                    renderRecordsTracker();
+                } else {
+                    recordsCurrentHeaders = [];
+                    recordsCurrentData = [];
+                    recordsCurrentRowNumbers = [];
+                    if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px;">No records found</td></tr>';
+                }
+            })
+            .catch(() => {
+                if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px;">Connection error</td></tr>';
+            })
+            .finally(() => { isRecordsRefreshInProgress = false; });
+    }
+
+    function getRecordsFilteredRows() {
+        if (!recordsCurrentHeaders.length) return [];
+        const filters = getRecordsTrackerFilters();
+        const idxDate = getRecordsColIndex('DATE');
+        const idxMonth = getRecordsColIndex('MONTH');
+        return recordsCurrentData.map((row, index) => {
+            const rowNumber = recordsCurrentRowNumbers[index] || index + 2;
+            const dateObj = idxDate !== -1 ? parseRecordsDate_(row[idxDate]) : null;
+            const dateKey = dateObj ? formatRecordsDate_(dateObj) : '';
+            const monthKey = idxMonth !== -1 ? (row[idxMonth] || '').toString().trim().toLowerCase() : '';
+            return { row, rowNumber, dateKey, monthKey, dateObj };
+        }).filter(entry => recordsRowMatchesFilters(entry.row, idxDate, filters)).sort((a, b) => {
+            if (filters.viewMode === 'monthly') {
+                const monthA = a.monthKey || (a.dateObj ? formatRecordsMonth_(a.dateObj).toLowerCase() : '');
+                const monthB = b.monthKey || (b.dateObj ? formatRecordsMonth_(b.dateObj).toLowerCase() : '');
+                if (monthA !== monthB) return monthB.localeCompare(monthA);
+            }
+            const timeA = a.dateObj ? a.dateObj.getTime() : 0;
+            const timeB = b.dateObj ? b.dateObj.getTime() : 0;
+            if (timeA !== timeB) return timeB - timeA;
+            return b.rowNumber - a.rowNumber;
+        });
+    }
+
+    function openAddRecordsModal() {
+        const modal = document.getElementById('addRecordsModal');
+        if (!modal) return;
+        document.getElementById('addRecordsForm').reset();
+        const dateEl = document.getElementById('add_record_date');
+        if (dateEl) {
+            dateEl.value = formatRecordsDate_(new Date());
+        }
+        syncAddRecordMonthOptions();
+        modal.classList.add('active');
+    }
+
+    function closeAddRecordsModal() {
+        document.getElementById('addRecordsModal')?.classList.remove('active');
+    }
+
+    function syncAddRecordMonthOptions() {
+        const dateVal = document.getElementById('add_record_date')?.value || '';
+        const monthEl = document.getElementById('add_record_month');
+        if (!monthEl) return;
+        setRecordsMonthOptions(monthEl, dateVal, monthEl.value || formatRecordsMonth_(dateVal));
+    }
+
+    async function submitAddRecordsEntry(event) {
+        event.preventDefault();
+        const dateRaw = document.getElementById('add_record_date').value.trim();
+        const date = formatRecordsDate_(dateRaw);
+        if (!date) {
+            showMessage('Please select a valid date', 'error');
+            return;
+        }
+        const month = document.getElementById('add_record_month')?.value || formatRecordsMonth_(date);
+        const payload = new URLSearchParams();
+        payload.append('action', 'addRecord');
+        payload.append('date', date);
+        payload.append('month', month);
+        payload.append('totalId', document.getElementById('add_record_totalId').value || '0');
+        payload.append('working', document.getElementById('add_record_working').value || '0');
+        payload.append('transfer', document.getElementById('add_record_transfer').value || '0');
+        payload.append('monthly', document.getElementById('add_record_monthly').value || '0');
+        payload.append('setup', document.getElementById('add_record_setup').value || '0');
+        payload.append('remarks', document.getElementById('add_record_remarks').value.trim());
+        try {
+            showMessage('Saving record...', 'pending');
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload });
+            const result = await response.json();
+            if (result.success) {
+                closeAddRecordsModal();
+                await loadRecordsTrackerData(true);
+                showMessage(result.message || 'New record added', 'success');
+            } else {
+                showMessage(result.message || 'Save failed', 'error');
+            }
+        } catch (error) {
+            showMessage('Network error', 'error');
+        }
+    }
+
+    async function updateRecordsTrackerCell(rowNumber, field, value) {
+        const payload = new URLSearchParams();
+        payload.append('action', 'updateRecordField');
+        payload.append('row', rowNumber);
+        payload.append('field', field);
+        payload.append('value', field === 'date' ? (formatRecordsDate_(value) || value) : value);
+        try {
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload });
+            const result = await response.json();
+            if (result.success) {
+                await loadRecordsTrackerData(true);
+            } else {
+                showMessage(result.message || 'Update failed', 'error');
+            }
+        } catch (error) {
+            showMessage('Network error', 'error');
+        }
+    }
+
+    async function handleRecordsDateChange(rowNumber, dateValue) {
+        const monthValue = formatRecordsMonth_(dateValue);
+        const dateEl = document.getElementById(getRecordsRowDomId(rowNumber, 'date'));
+        const monthEl = document.getElementById(getRecordsRowDomId(rowNumber, 'month'));
+        if (monthEl) {
+            setRecordsMonthOptions(monthEl, dateValue, monthValue);
+            monthEl.value = monthValue;
+        }
+        await updateRecordsTrackerCell(rowNumber, 'date', dateValue);
+        if (monthValue) {
+            await updateRecordsTrackerCell(rowNumber, 'month', monthValue);
+        }
+        if (dateEl) dateEl.value = dateValue;
+    }
+
+    async function saveRecordsTrackerRow(rowNumber) {
+        const payload = new URLSearchParams();
+        payload.append('action', 'updateRecord');
+        payload.append('row', rowNumber);
+        payload.append('date', formatRecordsDate_(document.getElementById(getRecordsRowDomId(rowNumber, 'date'))?.value || '') || '');
+        payload.append('month', formatRecordsMonth_(document.getElementById(getRecordsRowDomId(rowNumber, 'date'))?.value || '') || document.getElementById(getRecordsRowDomId(rowNumber, 'month'))?.value || '');
+        payload.append('totalId', document.getElementById(getRecordsRowDomId(rowNumber, 'totalId'))?.value || '0');
+        payload.append('working', document.getElementById(getRecordsRowDomId(rowNumber, 'working'))?.value || '0');
+        payload.append('transfer', document.getElementById(getRecordsRowDomId(rowNumber, 'transfer'))?.value || '0');
+        payload.append('monthly', document.getElementById(getRecordsRowDomId(rowNumber, 'monthly'))?.value || '0');
+        payload.append('setup', document.getElementById(getRecordsRowDomId(rowNumber, 'setup'))?.value || '0');
+        payload.append('remarks', document.getElementById(getRecordsRowDomId(rowNumber, 'remarks'))?.value || '');
+        try {
+            showMessage('Updating...', 'pending');
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload });
+            const result = await response.json();
+            if (result.success) {
+                await loadRecordsTrackerData(true);
+                showMessage('Record updated', 'success');
+            } else {
+                showMessage(result.message || 'Update failed', 'error');
+            }
+        } catch (error) {
+            showMessage('Network error', 'error');
+        }
+    }
+
+    async function deleteRecordsTrackerRow(rowNumber) {
+        if (!confirm('Delete this record from Records Tracker?')) return;
+        const payload = new URLSearchParams();
+        payload.append('action', 'deleteRecord');
+        payload.append('row', rowNumber);
+        try {
+            showMessage('Deleting...', 'pending');
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload });
+            const result = await response.json();
+            if (result.success) {
+                await loadRecordsTrackerData(true);
+                showMessage('Record deleted', 'success');
+            } else {
+                showMessage(result.message || 'Delete failed', 'error');
+            }
+        } catch (error) {
+            showMessage('Network error', 'error');
+        }
+    }
+
+    function renderRecordsTracker() {
+        const body = document.getElementById('recordsTrackerBody');
+        const cards = document.getElementById('recordsSummaryCards');
+        if (!body || !cards) return;
+
+        const rows = getRecordsFilteredRows();
+        const idxTotalId = getRecordsColIndex('TOTAL ID');
+        const idxWorking = getRecordsColIndex('WORKING AMOUNT');
+        const idxTransfer = getRecordsColIndex('TRANSFER AMT');
+        const idxMonthly = getRecordsColIndex('MONTHLY AMT');
+        const idxSetup = getRecordsColIndex('SETUP AMOUNT');
+        const idxRemarks = getRecordsColIndex('REMARKS');
+        const idxDate = getRecordsColIndex('DATE');
+        const idxMonth = getRecordsColIndex('MONTH');
+
+        const totalIds = rows.reduce((sum, entry) => sum + normalizeRecordNumber(entry.row[idxTotalId]), 0);
+        const totalWorking = rows.reduce((sum, entry) => sum + normalizeRecordNumber(entry.row[idxWorking]), 0);
+        const totalTransfer = rows.reduce((sum, entry) => sum + normalizeRecordNumber(entry.row[idxTransfer]), 0);
+        const totalMonthly = rows.reduce((sum, entry) => sum + normalizeRecordNumber(entry.row[idxMonthly]), 0);
+        const totalSetup = rows.reduce((sum, entry) => sum + normalizeRecordNumber(entry.row[idxSetup]), 0);
+
+        cards.innerHTML = [
+            ['Rows', rows.length],
+            ['Total ID', totalIds],
+            ['Working Amt', formatMoney(totalWorking)],
+            ['Transfer Amt', formatMoney(totalTransfer)],
+            ['Monthly Amt', formatMoney(totalMonthly)],
+            ['Setup Amt', formatMoney(totalSetup)]
+        ].map(item => `<div class="records-summary-card"><span>${item[0]}</span><strong>${item[1]}</strong></div>`).join('');
+
+        if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px;">No records found</td></tr>';
+            return;
+        }
+
+        body.innerHTML = rows.map(entry => {
+            const row = entry.row;
+            const rowNumber = entry.rowNumber;
+            const dateId = getRecordsRowDomId(rowNumber, 'date');
+            const monthId = getRecordsRowDomId(rowNumber, 'month');
+            const totalId = getRecordsRowDomId(rowNumber, 'totalId');
+            const workingId = getRecordsRowDomId(rowNumber, 'working');
+            const transferId = getRecordsRowDomId(rowNumber, 'transfer');
+            const monthlyId = getRecordsRowDomId(rowNumber, 'monthly');
+            const setupId = getRecordsRowDomId(rowNumber, 'setup');
+            const remarksId = getRecordsRowDomId(rowNumber, 'remarks');
+            const dateVal = idxDate !== -1 ? formatRecordsDate_(row[idxDate]) : '';
+            const monthVal = idxMonth !== -1 ? normalizeRecordsMonthDisplay_(row[idxMonth], row[idxDate]) : '';
+            const totalIdVal = idxTotalId !== -1 ? getRecordsDisplayValue(row[idxTotalId]) : '0';
+            const workingVal = idxWorking !== -1 ? getRecordsDisplayValue(row[idxWorking]) : '0';
+            const transferVal = idxTransfer !== -1 ? getRecordsDisplayValue(row[idxTransfer]) : '0';
+            const monthlyVal = idxMonthly !== -1 ? getRecordsDisplayValue(row[idxMonthly]) : '0';
+            const setupVal = idxSetup !== -1 ? getRecordsDisplayValue(row[idxSetup]) : '0';
+            const remarksVal = idxRemarks !== -1 ? (row[idxRemarks] || '') : '';
+            const monthOptions = buildRecordsMonthOptions_(dateVal || entry.dateKey, monthVal);
+            return `<tr>
+                <td data-label="Date"><input class="records-cell-input" type="text" id="${dateId}" value="${escapeHtml(dateVal)}" placeholder="DD-MM-YYYY" onchange="handleRecordsDateChange(${rowNumber}, this.value)"></td>
+                <td data-label="Month"><select class="records-cell-input" id="${monthId}" onchange="updateRecordsTrackerCell(${rowNumber},'month',this.value)">${monthOptions}</select></td>
+                <td data-label="Total ID"><input class="records-cell-input" type="number" step="1" id="${totalId}" value="${escapeHtml(totalIdVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'totalId',this.value)"></td>
+                <td data-label="Working Amount"><input class="records-cell-input" type="number" step="0.01" id="${workingId}" value="${escapeHtml(workingVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'working',this.value)"></td>
+                <td data-label="Transfer Amt"><input class="records-cell-input" type="number" step="0.01" id="${transferId}" value="${escapeHtml(transferVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'transfer',this.value)"></td>
+                <td data-label="Monthly Amount"><input class="records-cell-input" type="number" step="0.01" id="${monthlyId}" value="${escapeHtml(monthlyVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'monthly',this.value)"></td>
+                <td data-label="Setup Amount"><input class="records-cell-input" type="number" step="0.01" id="${setupId}" value="${escapeHtml(setupVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'setup',this.value)"></td>
+                <td data-label="Remarks"><textarea class="records-cell-input records-textarea" id="${remarksId}" onchange="updateRecordsTrackerCell(${rowNumber},'remarks',this.value)">${escapeHtml(remarksVal)}</textarea></td>
+                <td data-label="Actions">
+                    <div class="records-row-actions">
+                        <button type="button" class="records-action-btn update" onclick="saveRecordsTrackerRow(${rowNumber})">Update</button>
+                        <button type="button" class="records-action-btn delete" onclick="deleteRecordsTrackerRow(${rowNumber})">Delete</button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function syncRecordsRowMonthOptions(rowNumber) {
+        const dateEl = document.getElementById(getRecordsRowDomId(rowNumber, 'date'));
+        const monthEl = document.getElementById(getRecordsRowDomId(rowNumber, 'month'));
+        if (!dateEl || !monthEl) return;
+        setRecordsMonthOptions(monthEl, dateEl.value, monthEl.value);
+    }
+
+    function exportRecordsTrackerCsv() {
+        const rows = getRecordsFilteredRows();
+        if (!rows.length) return alert('No records to export');
+        const idxDate = getRecordsColIndex('DATE');
+        const idxMonth = getRecordsColIndex('MONTH');
+        const idxTotalId = getRecordsColIndex('TOTAL ID');
+        const idxWorking = getRecordsColIndex('WORKING AMOUNT');
+        const idxTransfer = getRecordsColIndex('TRANSFER AMT');
+        const idxMonthly = getRecordsColIndex('MONTHLY AMT');
+        const idxSetup = getRecordsColIndex('SETUP AMOUNT');
+        const idxRemarks = getRecordsColIndex('REMARKS');
+        const headers = ['Date', 'Month', 'Total ID', 'Working Amount', 'Transfer Amt', 'Monthly Amount', 'Setup Amount', 'Remarks'];
+        const csvRows = rows.map(entry => {
+            const row = entry.row;
+            return [
+                idxDate !== -1 ? formatRecordsDate_(row[idxDate]) : '',
+                idxMonth !== -1 ? row[idxMonth] : '',
+                idxTotalId !== -1 ? row[idxTotalId] : '',
+                idxWorking !== -1 ? row[idxWorking] : '',
+                idxTransfer !== -1 ? row[idxTransfer] : '',
+                idxMonthly !== -1 ? row[idxMonthly] : '',
+                idxSetup !== -1 ? row[idxSetup] : '',
+                idxRemarks !== -1 ? row[idxRemarks] : ''
+            ];
+        });
+        downloadCsvCustom(`KRP_Records_Tracker_${formatRecordsDate_(new Date()) || getLocalISODate(new Date())}.csv`, headers, csvRows);
+    }
+
+    function handleRecordsDateFilterChange() {
+        updateRecordsDateFilterVisibility();
+        renderRecordsTracker();
+    }
+
+    function handleRecordsTrackerChange() {
+        renderRecordsTracker();
+    }
+
+    function resetRecordsTrackerFilters() {
+        const view = document.getElementById('recordsViewMode');
+        const month = document.getElementById('recordsMonthFilter');
+        const mode = document.getElementById('recordsDateFilterMode');
+        const value = document.getElementById('recordsDateFilterValue');
+        if (view) view.value = 'monthly';
+        if (month) month.value = 'all';
+        if (mode) mode.value = 'all';
+        if (value) value.value = getRelativeLocalISODate(0);
+        updateRecordsDateFilterVisibility();
+        renderRecordsTracker();
+    }
+
     function showMessage(msg, type) {
         let el = document.createElement('div');
         el.className = `message ${type}`;
