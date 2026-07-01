@@ -519,7 +519,7 @@
             <button class="btn-upi" onclick="openUpiModal()"><i class="fas fa-wallet"></i> UPI ID</button>
             <button class="btn-settings" onclick="openSettingsModal()"><i class="fas fa-cog"></i> Settings</button>
             <div class="tracker-dashboard-only tracker-dashboard-controls">
-                <select id="mainMonthFilter" onchange="loadTrackerData(false)" title="Filter by month"><option value="all">All Months</option></select>
+                <select id="mainMonthFilter" onchange="handleMainMonthFilterChange()" title="Filter by month"><option value="all">All Months</option></select>
                 <button class="btn-toggle-view" onclick="toggleViewMode()" id="viewModeBtn"><i class="fas fa-mobile-alt"></i> Mobile View</button>
             </div>
         </div>
@@ -636,7 +636,7 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label class="required">Date</label>
-                        <input type="text" id="add_record_date" placeholder="DD-MM-YYYY" onchange="syncAddRecordMonthOptions()" required>
+                        <input type="date" id="add_record_date" onchange="syncAddRecordMonthOptions()" required>
                     </div>
                     <div class="form-group">
                         <label>Month</label>
@@ -1488,7 +1488,18 @@
             if (recordsSelect) recordsSelect.innerHTML += `<option value="${recordsVal}">${recordsVal}</option>`;
             if (i === 0) currentMonthValue = val;
         }
-        if (currentMonthValue) select.value = currentMonthValue;
+        if (currentMonthValue) {
+            select.value = currentMonthValue;
+            if (dashboardSelect) dashboardSelect.value = currentMonthValue;
+        }
+    }
+
+    function handleMainMonthFilterChange() {
+        const mainMonth = document.getElementById('mainMonthFilter')?.value || 'all';
+        const dashboardMonth = document.getElementById('dashboardMonthFilter');
+        if (dashboardMonth) dashboardMonth.value = mainMonth;
+        loadTrackerData(false);
+        renderDashboard(getDashboardFilteredData());
     }
 
     function getRelativeLocalISODate(offsetDays = 0) {
@@ -1613,7 +1624,7 @@
         return text.startsWith("'") ? text.slice(1) : text;
     }
     function escapeHtml(value) {
-        return (value || '').toString().replace(/[&<>"']/g, ch => ({
+        return (value === null || value === undefined ? '' : value).toString().replace(/[&<>"']/g, ch => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         }[ch]));
     }
@@ -3924,19 +3935,51 @@
     }
 
     function parseRecordsDate_(value) {
-        if (!value) return null;
+        if (value === null || value === undefined || value === '') return null;
         if (value instanceof Date && !isNaN(value.getTime())) return value;
+        if (typeof value === 'number' && isFinite(value)) {
+            // Google Sheets serial date number (epoch: Dec 30, 1899)
+            const d = new Date(Date.UTC(1899, 11, 30) + value * 86400000);
+            return isNaN(d.getTime()) ? null : new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+        }
         const text = value.toString().trim();
         if (!text) return null;
-        const ddmmyyyy = text.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-        if (ddmmyyyy) {
-            const d = new Date(Number(ddmmyyyy[3]), Number(ddmmyyyy[2]) - 1, Number(ddmmyyyy[1]));
+        // DD-MM-YYYY
+        const ddmmyyyyDash = text.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+        if (ddmmyyyyDash) {
+            const d = new Date(Number(ddmmyyyyDash[3]), Number(ddmmyyyyDash[2]) - 1, Number(ddmmyyyyDash[1]));
             return isNaN(d.getTime()) ? null : d;
         }
+        // DD/MM/YYYY
+        const ddmmyyyySlash = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (ddmmyyyySlash) {
+            const d = new Date(Number(ddmmyyyySlash[3]), Number(ddmmyyyySlash[2]) - 1, Number(ddmmyyyySlash[1]));
+            return isNaN(d.getTime()) ? null : d;
+        }
+        // Pure YYYY-MM-DD stays as a local date.
+        const isoDateOnly = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (isoDateOnly) {
+            const d = new Date(Number(isoDateOnly[1]), Number(isoDateOnly[2]) - 1, Number(isoDateOnly[3]));
+            return isNaN(d.getTime()) ? null : d;
+        }
+        // Full ISO timestamps (with time / timezone) should be parsed as real instants.
+        if (/^\d{4}-\d{2}-\d{2}[T\s]/.test(text) || /Z$/.test(text) || /[+-]\d{2}:?\d{2}$/.test(text)) {
+            const d = new Date(text);
+            return isNaN(d.getTime()) ? null : d;
+        }
+        // YYYY-MM-DD-like strings with extra content.
         const isoDate = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
         if (isoDate) {
             const d = new Date(Number(isoDate[1]), Number(isoDate[2]) - 1, Number(isoDate[3]));
             return isNaN(d.getTime()) ? null : d;
+        }
+        // Pure serial number stored as text
+        if (/^\d+(\.\d+)?$/.test(text)) {
+            const num = Number(text);
+            if (num > 20000 && num < 90000) {
+                const d = new Date(Date.UTC(1899, 11, 30) + num * 86400000);
+                return isNaN(d.getTime()) ? null : new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+            }
         }
         const parsed = new Date(text);
         return isNaN(parsed.getTime()) ? null : parsed;
@@ -3948,6 +3991,10 @@
         const dd = String(date.getDate()).padStart(2, '0');
         const mm = String(date.getMonth() + 1).padStart(2, '0');
         return `${dd}-${mm}-${date.getFullYear()}`;
+    }
+
+    function normalizeRecordsDatePayload_(value) {
+        return formatRecordsDate_(value) || toDateInputValue_(value) || (value || '').toString().trim();
     }
 
     function toDateInputValue_(value) {
@@ -4114,7 +4161,7 @@
         document.getElementById('addRecordsForm').reset();
         const dateEl = document.getElementById('add_record_date');
         if (dateEl) {
-            dateEl.value = formatRecordsDate_(new Date());
+            dateEl.value = toDateInputValue_(new Date());
         }
         syncAddRecordMonthOptions();
         modal.classList.add('active');
@@ -4134,7 +4181,7 @@
     async function submitAddRecordsEntry(event) {
         event.preventDefault();
         const dateRaw = document.getElementById('add_record_date').value.trim();
-        const date = formatRecordsDate_(dateRaw);
+        const date = normalizeRecordsDatePayload_(dateRaw);
         if (!date) {
             showMessage('Please select a valid date', 'error');
             return;
@@ -4171,7 +4218,7 @@
         payload.append('action', 'updateRecordField');
         payload.append('row', rowNumber);
         payload.append('field', field);
-        payload.append('value', field === 'date' ? (formatRecordsDate_(value) || value) : value);
+        payload.append('value', field === 'date' ? normalizeRecordsDatePayload_(value) : value);
         try {
             const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload });
             const result = await response.json();
@@ -4204,7 +4251,7 @@
         const payload = new URLSearchParams();
         payload.append('action', 'updateRecord');
         payload.append('row', rowNumber);
-        payload.append('date', formatRecordsDate_(document.getElementById(getRecordsRowDomId(rowNumber, 'date'))?.value || '') || '');
+        payload.append('date', normalizeRecordsDatePayload_(document.getElementById(getRecordsRowDomId(rowNumber, 'date'))?.value || ''));
         payload.append('month', formatRecordsMonth_(document.getElementById(getRecordsRowDomId(rowNumber, 'date'))?.value || '') || document.getElementById(getRecordsRowDomId(rowNumber, 'month'))?.value || '');
         payload.append('totalId', document.getElementById(getRecordsRowDomId(rowNumber, 'totalId'))?.value || '0');
         payload.append('working', document.getElementById(getRecordsRowDomId(rowNumber, 'working'))?.value || '0');
@@ -4303,14 +4350,14 @@
             const remarksVal = idxRemarks !== -1 ? (row[idxRemarks] || '') : '';
             const monthOptions = buildRecordsMonthOptions_(dateVal || entry.dateKey, monthVal);
             return `<tr>
-                <td data-label="Date"><input class="records-cell-input" type="text" id="${dateId}" value="${escapeHtml(dateVal)}" placeholder="DD-MM-YYYY" onchange="handleRecordsDateChange(${rowNumber}, this.value)"></td>
-                <td data-label="Month"><select class="records-cell-input" id="${monthId}" onchange="updateRecordsTrackerCell(${rowNumber},'month',this.value)">${monthOptions}</select></td>
-                <td data-label="Total ID"><input class="records-cell-input" type="number" step="1" id="${totalId}" value="${escapeHtml(totalIdVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'totalId',this.value)"></td>
-                <td data-label="Working Amount"><input class="records-cell-input" type="number" step="0.01" id="${workingId}" value="${escapeHtml(workingVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'working',this.value)"></td>
-                <td data-label="Transfer Amt"><input class="records-cell-input" type="number" step="0.01" id="${transferId}" value="${escapeHtml(transferVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'transfer',this.value)"></td>
-                <td data-label="Monthly Amount"><input class="records-cell-input" type="number" step="0.01" id="${monthlyId}" value="${escapeHtml(monthlyVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'monthly',this.value)"></td>
-                <td data-label="Setup Amount"><input class="records-cell-input" type="number" step="0.01" id="${setupId}" value="${escapeHtml(setupVal)}" onchange="updateRecordsTrackerCell(${rowNumber},'setup',this.value)"></td>
-                <td data-label="Remarks"><textarea class="records-cell-input records-textarea" id="${remarksId}" onchange="updateRecordsTrackerCell(${rowNumber},'remarks',this.value)">${escapeHtml(remarksVal)}</textarea></td>
+                <td data-label="Date"><input class="records-cell-input" type="date" id="${dateId}" value="${escapeHtml(toDateInputValue_(dateVal))}" onchange="syncRecordsRowMonthOptions(${rowNumber})"></td>
+                <td data-label="Month"><select class="records-cell-input" id="${monthId}">${monthOptions}</select></td>
+                <td data-label="Total ID"><input class="records-cell-input" type="number" step="1" id="${totalId}" value="${escapeHtml(totalIdVal)}"></td>
+                <td data-label="Working Amount"><input class="records-cell-input" type="number" step="0.01" id="${workingId}" value="${escapeHtml(workingVal)}"></td>
+                <td data-label="Transfer Amt"><input class="records-cell-input" type="number" step="0.01" id="${transferId}" value="${escapeHtml(transferVal)}"></td>
+                <td data-label="Monthly Amount"><input class="records-cell-input" type="number" step="0.01" id="${monthlyId}" value="${escapeHtml(monthlyVal)}"></td>
+                <td data-label="Setup Amount"><input class="records-cell-input" type="number" step="0.01" id="${setupId}" value="${escapeHtml(setupVal)}"></td>
+                <td data-label="Remarks"><textarea class="records-cell-input records-textarea" id="${remarksId}">${escapeHtml(remarksVal)}</textarea></td>
                 <td data-label="Actions">
                     <div class="records-row-actions">
                         <button type="button" class="records-action-btn update" onclick="saveRecordsTrackerRow(${rowNumber})">Update</button>
