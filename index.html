@@ -608,6 +608,7 @@
                 <input type="date" id="recordsDateFilterValue" class="date-filter-input" onchange="handleRecordsTrackerChange()" title="Select exact date">
                 <button type="button" class="btn-outline" onclick="openAddRecordsModal()"><i class="fas fa-plus"></i> Add Record</button>
                 <button type="button" class="btn-outline" onclick="exportRecordsTrackerCsv()"><i class="fas fa-file-csv" style="color:#1d6f42;"></i> Download Summary</button>
+                <button type="button" class="btn-outline" onclick="openLegacyRecordsIndex()"><i class="fas fa-file-code"></i> Open INDEX.html</button>
                 <button type="button" class="btn-outline" onclick="resetRecordsTrackerFilters()"><i class="fas fa-undo"></i> Reset</button>
             </div>
             <div id="recordsSummaryCards" class="records-summary-grid"></div>
@@ -754,6 +755,7 @@
                             <label class="multi-select-option"><input type="checkbox" value="PMFBY KHARIF" onchange="updateMultiSelect('purpose')"> PMFBY KHARIF</label>
                             <label class="multi-select-option"><input type="checkbox" value="PMFBY RABI" onchange="updateMultiSelect('purpose')"> PMFBY RABI</label>
                             <label class="multi-select-option"><input type="checkbox" value="P-Pacs" onchange="updateMultiSelect('purpose')"> P-Pacs</label>
+                            <label class="multi-select-option"><input type="checkbox" value="KRP APPROVAL TOOL" onchange="updateMultiSelect('purpose')"> KRP APPROVAL TOOL</label>
                             <div class="purpose-year-row">
                                 <label for="purposeYear">Year</label>
                                 <select id="purposeYear" class="purpose-year-select" onchange="updateMultiSelect('purpose')"></select>
@@ -845,6 +847,7 @@
                         <label class="multi-select-option"><input type="checkbox" value="PMFBY KHARIF" onchange="updateMultiSelect('edit_purpose')"> PMFBY KHARIF</label>
                         <label class="multi-select-option"><input type="checkbox" value="PMFBY RABI" onchange="updateMultiSelect('edit_purpose')"> PMFBY RABI</label>
                         <label class="multi-select-option"><input type="checkbox" value="P-Pacs" onchange="updateMultiSelect('edit_purpose')"> P-Pacs</label>
+                        <label class="multi-select-option"><input type="checkbox" value="KRP APPROVAL TOOL" onchange="updateMultiSelect('edit_purpose')"> KRP APPROVAL TOOL</label>
                         <div class="purpose-year-row">
                             <label for="editPurposeYear">Year</label>
                             <select id="editPurposeYear" class="purpose-year-select" onchange="updateMultiSelect('edit_purpose')"></select>
@@ -4401,6 +4404,11 @@
             ];
         });
         downloadCsvCustom(`KRP_Records_Tracker_${formatRecordsDate_(new Date()) || getLocalISODate(new Date())}.csv`, headers, csvRows);
+    }
+
+    function openLegacyRecordsIndex() {
+        const legacyUrl = 'file:///C:/Users/Hello/OneDrive/Desktop/TRIAL/KRP%20DASHBOARD%20TRACKER%20SHEET2/INDEX.html';
+        window.open(legacyUrl, '_blank', 'noopener');
     }
 
     function handleRecordsDateFilterChange() {
