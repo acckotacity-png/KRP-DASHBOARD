@@ -98,7 +98,18 @@
         .filter-select { padding: 10px; border: 1px solid #e0e5f2; border-radius: 8px; outline: none; min-width: 130px; background: white; }
         .date-filter-input { display: none; padding: 10px; border: 1px solid #e0e5f2; border-radius: 8px; outline: none; min-width: 155px; background: white; }
         .btn-outline { border: 1px solid #e0e5f2; background: white; color: #1b2559; padding: 10px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-        .table-wrapper { overflow-x: auto; border-radius: 10px; border: 1px solid #e0e5f2; }
+        .table-wrapper { overflow-x: hidden; border-radius: 10px; border: 1px solid #e0e5f2; width: 100%; }
+        #dataTable { width: 100%; min-width: 0; table-layout: fixed; }
+        #dataTable th, #dataTable td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #dataTable th:nth-child(1), #dataTable td:nth-child(1) { width: 16%; min-width: 150px; }
+        #dataTable th:nth-child(2), #dataTable td:nth-child(2) { width: 9%; min-width: 90px; }
+        #dataTable th:nth-child(3), #dataTable td:nth-child(3) { width: 24%; min-width: 180px; }
+        #dataTable th:nth-child(4), #dataTable td:nth-child(4) { width: 16%; min-width: 120px; }
+        #dataTable th:nth-child(5), #dataTable td:nth-child(5) { width: 10%; min-width: 90px; }
+        #dataTable th:nth-child(6), #dataTable td:nth-child(6) { width: 10%; min-width: 100px; }
+        #dataTable th:nth-child(7), #dataTable td:nth-child(7) { width: 8%; min-width: 90px; }
+        #dataTable th:nth-child(8), #dataTable td:nth-child(8) { width: 11%; min-width: 110px; }
+        #dataTable th:nth-child(9), #dataTable td:nth-child(9) { width: 16%; min-width: 170px; }
         table { width: 100%; border-collapse: collapse; font-size: 12px; }
         th { background: #f4f7fe; color: #a3aed1; font-weight: 600; text-align: left; padding: 12px 10px; white-space: nowrap; }
         td { padding: 12px 10px; border-bottom: 1px solid #e0e5f2; color: #2b3674; font-weight: 500; }
@@ -156,8 +167,8 @@
         .badge-advance { background: #f0f0f0; color: #333; }
         .badge-partial { background: #e6f2ff; color: #ff9800; border: 1px dashed #ff9800; }
         
-        .action-icons { display: flex; gap: 5px; justify-content: flex-end; flex-wrap: wrap; }
-        .action-btn { width: 28px; height: 28px; border-radius: 6px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; }
+        .action-icons { display: flex; gap: 4px; justify-content: flex-end; flex-wrap: wrap; }
+        .action-btn { width: 24px; height: 24px; border-radius: 6px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; flex: 0 0 auto; }
         .btn-whatsapp { background: #e6fcf5; color: #05cd99; }
         .btn-wa-direct { background: #25D366; color: #fff; }
         .btn-edit { background: #e6f2ff; color: #4318ff; }
@@ -228,6 +239,20 @@
         .ledger-table .ledger-purpose, .ledger-table .ledger-remarks { min-width: 180px; white-space: normal; }
         .ledger-table .ledger-actions { min-width: 135px; }
         .ledger-due.positive { color: #ee5d50; font-weight: 800; }
+        .ledger-history-panel { margin-top: 15px; border: 1px solid #e0e5f2; border-radius: 12px; background: #fff; overflow: hidden; }
+        .ledger-history-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 15px; background: #f4f7fe; border-bottom: 1px solid #e0e5f2; font-weight: 700; color: #1b2559; }
+        .ledger-history-header span { font-size: 11px; color: #a3aed1; font-weight: 700; text-transform: uppercase; }
+        .ledger-history-body { max-height: 240px; overflow: auto; padding: 12px; display: grid; gap: 10px; }
+        .ledger-history-item { background: #f9fbff; border: 1px solid #e0e5f2; border-radius: 10px; padding: 12px; }
+        .ledger-history-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; margin-bottom: 8px; }
+        .ledger-history-top strong { color: #1b2559; font-size: 13px; }
+        .ledger-history-top span { color: #a3aed1; font-size: 11px; font-weight: 700; text-align: right; }
+        .ledger-history-meta { font-size: 12px; color: #2b3674; margin-bottom: 8px; }
+        .ledger-history-changes { display: grid; gap: 6px; }
+        .ledger-history-change { display: flex; gap: 10px; justify-content: space-between; align-items: flex-start; font-size: 12px; }
+        .ledger-history-change span { color: #a3aed1; min-width: 130px; font-weight: 700; }
+        .ledger-history-change strong { color: #1b2559; font-weight: 600; text-align: right; white-space: normal; }
+        .ledger-history-empty { color: #a3aed1; font-size: 13px; text-align: center; padding: 10px 0; }
 
         .qr-preview-box { background: #ffffff; padding: 15px; border-radius: 20px; margin: 10px 0; }
         #qrCodeContainer { display: flex; justify-content: center; margin: 10px 0; }
@@ -938,6 +963,10 @@
                 </tbody>
             </table>
         </div>
+        <div class="ledger-history-panel">
+            <div class="ledger-history-header"><span><i class="fas fa-clock-rotate-left"></i> Update History</span><span>Saved with date and time</span></div>
+            <div id="ledgerHistoryBody" class="ledger-history-body"><div class="ledger-history-empty">Open a ledger to see its update history.</div></div>
+        </div>
     </div>
 </div>
 
@@ -1112,6 +1141,7 @@
     const RECORDS_TRACKER_CUSTOM_KEY = 'krp_records_tracker_custom_v1';
     const RECORDS_TRACKER_DELETED_KEY = 'krp_records_tracker_deleted_v1';
     const RECORDS_TRACKER_ARCHIVE_KEY = 'krp_records_tracker_archive_v1';
+    const LEDGER_HISTORY_KEY = 'krp_ledger_history_v1';
 
     let currentData = [], currentHeaders = [], isMobileView = false;
     let recordsCurrentData = [], recordsCurrentHeaders = [], recordsCurrentRowNumbers = [], isRecordsRefreshInProgress = false;
@@ -1952,6 +1982,7 @@
             <div class="ledger-summary-item balance"><span>Balance</span><strong>${formatLedgerMoney(totalBalance)}</strong></div>
         `;
         document.getElementById('ledgerTableBody').innerHTML = rowsHtml || '<tr><td colspan="12" style="text-align:center; padding:20px;">No records found</td></tr>';
+        renderLedgerHistory(contactKey, ledgerRows);
         document.getElementById('contactLedgerModal').classList.add('active');
     }
     function closeContactLedger() {
@@ -3158,6 +3189,127 @@
         }
     }
 
+    function readLedgerHistoryStore() {
+        try {
+            const store = JSON.parse(localStorage.getItem(LEDGER_HISTORY_KEY) || '{}');
+            return store && typeof store === 'object' && !Array.isArray(store) ? store : {};
+        } catch (error) {
+            localStorage.removeItem(LEDGER_HISTORY_KEY);
+            return {};
+        }
+    }
+
+    function writeLedgerHistoryStore(store) {
+        try {
+            localStorage.setItem(LEDGER_HISTORY_KEY, JSON.stringify(store && typeof store === 'object' ? store : {}));
+        } catch (error) {
+            console.warn('Ledger history save failed:', error);
+        }
+    }
+
+    function formatLedgerHistoryTimestamp(ts) {
+        const d = new Date(ts || Date.now());
+        if (isNaN(d)) return '-';
+        return d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    }
+
+    function getLedgerRowValue(row, name) {
+        const idx = getColIndex(name);
+        return idx !== -1 ? showSheetText(row[idx]).trim() : '';
+    }
+
+    function captureLedgerSnapshotFromRow(row = []) {
+        return {
+            invoiceNo: getLedgerRowValue(row, 'INVOICE NO.'),
+            date: getLedgerRowValue(row, 'DATE'),
+            contactName: getLedgerRowValue(row, 'CONTACT NO. OR NAME'),
+            bankOwner: getLedgerRowValue(row, 'BANK OWNER NAME'),
+            state: getLedgerRowValue(row, 'STATE'),
+            purpose: getLedgerRowValue(row, 'PURPOSE'),
+            serviceRemarks: getLedgerRowValue(row, 'SERVICE CHARGE REMARKS'),
+            loginId: getLedgerRowValue(row, 'LOGIN ID'),
+            dealingAmount: getLedgerRowValue(row, 'DEALING AMOUNT'),
+            amountDeno: getLedgerRowValue(row, 'AMOUNT DENO'),
+            receivedAmount: getLedgerRowValue(row, 'RECEIVED AMOUNT'),
+            idActivationAmount: getLedgerRowValue(row, 'ID ACTIVATION AMOUNT'),
+            uploadingAmount: getLedgerRowValue(row, 'UPLOADING OR SETUP AMOUNT'),
+            utrNo: getLedgerRowValue(row, 'UTR / TRN NO.'),
+            paymentStatus: getLedgerRowValue(row, 'PAYMENT STATUS'),
+            remarks: getLedgerRowValue(row, 'REMARKS')
+        };
+    }
+
+    function formatLedgerHistoryValue(field, value) {
+        const text = (value === null || value === undefined ? '' : value).toString().trim();
+        if (!text) return '-';
+        if (field === 'date') return formatDisplayDate(text) || text;
+        if (['dealingAmount', 'amountDeno', 'receivedAmount', 'idActivationAmount', 'uploadingAmount'].includes(field)) {
+            const num = parseFloat(text);
+            return isNaN(num) ? text : 'Rs. ' + num.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        }
+        return text;
+    }
+
+    function buildLedgerHistoryChanges(before, after) {
+        const fields = [
+            ['date', 'Date'],
+            ['contactName', 'Contact'],
+            ['bankOwner', 'Bank Name'],
+            ['state', 'State'],
+            ['purpose', 'Purpose'],
+            ['serviceRemarks', 'Service Remarks'],
+            ['loginId', 'Login ID'],
+            ['dealingAmount', 'Dealing Amount'],
+            ['amountDeno', 'Amount Deno'],
+            ['receivedAmount', 'Received Amount'],
+            ['idActivationAmount', 'ID Activation Amount'],
+            ['uploadingAmount', 'Uploading Amount'],
+            ['utrNo', 'UTR / TRN NO.'],
+            ['paymentStatus', 'Payment Status'],
+            ['remarks', 'Remarks']
+        ];
+        return fields.reduce((acc, pair) => {
+            const key = pair[0];
+            const label = pair[1];
+            const beforeText = formatLedgerHistoryValue(key, before && before[key]);
+            const afterText = formatLedgerHistoryValue(key, after && after[key]);
+            if (beforeText !== afterText) acc.push({ label: label, before: beforeText, after: afterText });
+            return acc;
+        }, []);
+    }
+
+    function appendLedgerHistoryEntry(contactKey, invoiceNo, action, before, after) {
+        const key = normalizeContactLedgerKey(contactKey || (after && after.contactName) || (before && before.contactName) || '');
+        if (!key) return;
+        const changes = buildLedgerHistoryChanges(before, after);
+        if (!changes.length) return;
+        const store = readLedgerHistoryStore();
+        if (!Array.isArray(store[key])) store[key] = [];
+        store[key].unshift({
+            timestamp: Date.now(),
+            action: action || 'Update',
+            invoiceNo: invoiceNo || (after && after.invoiceNo) || (before && before.invoiceNo) || '-',
+            changes: changes
+        });
+        writeLedgerHistoryStore(store);
+    }
+
+    function renderLedgerHistory(contactKey, ledgerRows) {
+        const body = document.getElementById('ledgerHistoryBody');
+        if (!body) return;
+        const store = readLedgerHistoryStore();
+        const entries = Array.isArray(store[contactKey]) ? store[contactKey] : [];
+        if (!entries.length) {
+            body.innerHTML = '<div class="ledger-history-empty">No history yet for this ledger.</div>';
+            return;
+        }
+        body.innerHTML = entries.map(function(entry) {
+            const changeHtml = (entry.changes || []).map(function(ch) {
+                return '<div class="ledger-history-change"><span>' + escapeHtml(ch.label) + '</span><strong>' + escapeHtml(ch.before) + ' -> ' + escapeHtml(ch.after) + '</strong></div>';
+            }).join('');
+            return '<div class="ledger-history-item"><div class="ledger-history-top"><strong>' + escapeHtml(entry.action || 'Update') + '</strong><span>' + escapeHtml(formatLedgerHistoryTimestamp(entry.timestamp)) + '</span></div><div class="ledger-history-meta">Invoice: ' + escapeHtml(entry.invoiceNo || '-') + '</div><div class="ledger-history-changes">' + changeHtml + '</div></div>';
+        }).join('');
+    }
     function openAddRecordsModal() {
         const modal = document.getElementById('addRecordsModal');
         if (!modal) return;
@@ -3357,6 +3509,26 @@
         event.preventDefault();
         const rowIndex = document.getElementById('edit_rowId').value;
         if (!validateAndNotifyRecordEntry('edit_', rowIndex)) return;
+        const originalRow = currentData[Number(rowIndex)] || [];
+        const editHistoryBefore = captureLedgerSnapshotFromRow(originalRow);
+        const editHistoryAfter = {
+            invoiceNo: document.getElementById('edit_invoiceNo').value.trim(),
+            date: document.getElementById('edit_date').value,
+            contactName: document.getElementById('edit_contactName').value.trim(),
+            bankOwner: document.getElementById('edit_bankOwner').value.trim(),
+            state: document.getElementById('edit_state').value.trim(),
+            purpose: document.getElementById('edit_purpose').value.trim(),
+            serviceRemarks: document.getElementById('edit_serviceRemarks').value.trim(),
+            loginId: document.getElementById('edit_loginId').value.trim(),
+            dealingAmount: document.getElementById('edit_dealingAmount').value.trim(),
+            amountDeno: document.getElementById('edit_amountDeno').value.trim(),
+            receivedAmount: document.getElementById('edit_receivedAmount').value.trim(),
+            idActivationAmount: document.getElementById('edit_idActivationAmount').value.trim(),
+            uploadingAmount: document.getElementById('edit_uploadingAmount').value.trim(),
+            utrNo: document.getElementById('edit_utrNo').value.trim(),
+            paymentStatus: document.getElementById('edit_paymentStatus').value.trim(),
+            remarks: document.getElementById('edit_remarks').value.trim()
+        };
         const btn = document.getElementById('editForm').querySelector('.btn-submit');
         const ogText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
@@ -3386,6 +3558,7 @@
             const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
             const result   = await response.json();
             if (result.success) {
+                appendLedgerHistoryEntry(editHistoryAfter.contactName || editHistoryBefore.contactName, editHistoryAfter.invoiceNo || editHistoryBefore.invoiceNo, 'Full Edit', editHistoryBefore, editHistoryAfter);
                 showMessage('Record updated!', 'success');
                 closeFullEditModal();
                 loadTrackerData(true);
@@ -3397,23 +3570,53 @@
     // ─── QUICK UPDATE MODAL ───────────────────────────────────────
     function openPaymentModal(rowIndex) {
         const record = currentData[rowIndex];
+        const idxRecv = getColIndex('RECEIVED AMOUNT');
+        const receivedAmount = idxRecv !== -1 ? (parseFloat(record[idxRecv]) || 0) : 0;
         document.getElementById('modalRowIndex').value      = rowIndex;
         document.getElementById('modalInvoiceDisplay').value = record[getColIndex('INVOICE NO.')] || '';
         document.getElementById('modalUtr').value           = record[getColIndex('UTR / TRN NO.')] || '';
-        document.getElementById('modalStatus').value        = record[getColIndex('PAYMENT STATUS')] || 'PENDING';
+        const statusEl = document.getElementById('modalStatus');
+        statusEl.value = record[getColIndex('PAYMENT STATUS')] || 'PENDING';
+        const optionMap = {
+            SUCCESS: statusEl.querySelector('option[value="SUCCESS"]'),
+            PARTIAL: statusEl.querySelector('option[value="PARTIAL"]'),
+            ADVANCE: statusEl.querySelector('option[value="ADVANCE"]'),
+            FAILED: statusEl.querySelector('option[value="FAILED"]'),
+            REFUND: statusEl.querySelector('option[value="REFUND"]')
+        };
+        const lockStatusOptions = receivedAmount <= 0;
+        Object.values(optionMap).forEach(option => {
+            if (!option) return;
+            option.disabled = lockStatusOptions;
+            option.hidden = lockStatusOptions;
+        });
+        if (receivedAmount <= 0) {
+            statusEl.value = 'PENDING';
+        }
         document.getElementById('paymentModal').classList.add('active');
     }
     function closePaymentModal() { document.getElementById('paymentModal').classList.remove('active'); }
 
     async function savePaymentUpdate() {
         const rowIndex = document.getElementById('modalRowIndex').value;
-        const newStatus = document.getElementById('modalStatus').value;
+        let newStatus = document.getElementById('modalStatus').value;
         const newUtr    = document.getElementById('modalUtr').value.trim();
+        const paymentHistoryBefore = captureLedgerSnapshotFromRow(currentData[Number(rowIndex)] || []);
+        const paymentHistoryAfter = { ...paymentHistoryBefore, paymentStatus: newStatus, utrNo: newUtr };
+        const receivedAmount = parseFloat(paymentHistoryBefore.receivedAmount || '0') || 0;
+        if (receivedAmount <= 0) {
+            if (newStatus !== 'PENDING') {
+                showMessage('Received amount ke bina status PENDING hi rahega', 'error');
+            }
+            newStatus = 'PENDING';
+        }
+        paymentHistoryAfter.paymentStatus = newStatus;
         try {
             showMessage('Updating...', 'pending');
             const response = await fetch(`${APPS_SCRIPT_URL}?action=updateStatusUtr&row=${rowIndex}&status=${encodeURIComponent(newStatus)}&utr=${encodeURIComponent(newUtr)}&t=${Date.now()}`);
             const result   = await response.json();
             if (result.success) {
+                appendLedgerHistoryEntry(paymentHistoryAfter.contactName || paymentHistoryBefore.contactName, paymentHistoryAfter.invoiceNo || paymentHistoryBefore.invoiceNo, 'Quick Update', paymentHistoryBefore, paymentHistoryAfter);
                 showMessage('Updated!', 'success');
                 closePaymentModal();
                 loadTrackerData(true);
@@ -3837,6 +4040,127 @@
         });
     }
 
+    function readLedgerHistoryStore() {
+        try {
+            const store = JSON.parse(localStorage.getItem(LEDGER_HISTORY_KEY) || '{}');
+            return store && typeof store === 'object' && !Array.isArray(store) ? store : {};
+        } catch (error) {
+            localStorage.removeItem(LEDGER_HISTORY_KEY);
+            return {};
+        }
+    }
+
+    function writeLedgerHistoryStore(store) {
+        try {
+            localStorage.setItem(LEDGER_HISTORY_KEY, JSON.stringify(store && typeof store === 'object' ? store : {}));
+        } catch (error) {
+            console.warn('Ledger history save failed:', error);
+        }
+    }
+
+    function formatLedgerHistoryTimestamp(ts) {
+        const d = new Date(ts || Date.now());
+        if (isNaN(d)) return '-';
+        return d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    }
+
+    function getLedgerRowValue(row, name) {
+        const idx = getColIndex(name);
+        return idx !== -1 ? showSheetText(row[idx]).trim() : '';
+    }
+
+    function captureLedgerSnapshotFromRow(row = []) {
+        return {
+            invoiceNo: getLedgerRowValue(row, 'INVOICE NO.'),
+            date: getLedgerRowValue(row, 'DATE'),
+            contactName: getLedgerRowValue(row, 'CONTACT NO. OR NAME'),
+            bankOwner: getLedgerRowValue(row, 'BANK OWNER NAME'),
+            state: getLedgerRowValue(row, 'STATE'),
+            purpose: getLedgerRowValue(row, 'PURPOSE'),
+            serviceRemarks: getLedgerRowValue(row, 'SERVICE CHARGE REMARKS'),
+            loginId: getLedgerRowValue(row, 'LOGIN ID'),
+            dealingAmount: getLedgerRowValue(row, 'DEALING AMOUNT'),
+            amountDeno: getLedgerRowValue(row, 'AMOUNT DENO'),
+            receivedAmount: getLedgerRowValue(row, 'RECEIVED AMOUNT'),
+            idActivationAmount: getLedgerRowValue(row, 'ID ACTIVATION AMOUNT'),
+            uploadingAmount: getLedgerRowValue(row, 'UPLOADING OR SETUP AMOUNT'),
+            utrNo: getLedgerRowValue(row, 'UTR / TRN NO.'),
+            paymentStatus: getLedgerRowValue(row, 'PAYMENT STATUS'),
+            remarks: getLedgerRowValue(row, 'REMARKS')
+        };
+    }
+
+    function formatLedgerHistoryValue(field, value) {
+        const text = (value === null || value === undefined ? '' : value).toString().trim();
+        if (!text) return '-';
+        if (field === 'date') return formatDisplayDate(text) || text;
+        if (['dealingAmount', 'amountDeno', 'receivedAmount', 'idActivationAmount', 'uploadingAmount'].includes(field)) {
+            const num = parseFloat(text);
+            return isNaN(num) ? text : 'Rs. ' + num.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        }
+        return text;
+    }
+
+    function buildLedgerHistoryChanges(before, after) {
+        const fields = [
+            ['date', 'Date'],
+            ['contactName', 'Contact'],
+            ['bankOwner', 'Bank Name'],
+            ['state', 'State'],
+            ['purpose', 'Purpose'],
+            ['serviceRemarks', 'Service Remarks'],
+            ['loginId', 'Login ID'],
+            ['dealingAmount', 'Dealing Amount'],
+            ['amountDeno', 'Amount Deno'],
+            ['receivedAmount', 'Received Amount'],
+            ['idActivationAmount', 'ID Activation Amount'],
+            ['uploadingAmount', 'Uploading Amount'],
+            ['utrNo', 'UTR / TRN NO.'],
+            ['paymentStatus', 'Payment Status'],
+            ['remarks', 'Remarks']
+        ];
+        return fields.reduce((acc, pair) => {
+            const key = pair[0];
+            const label = pair[1];
+            const beforeText = formatLedgerHistoryValue(key, before && before[key]);
+            const afterText = formatLedgerHistoryValue(key, after && after[key]);
+            if (beforeText !== afterText) acc.push({ label: label, before: beforeText, after: afterText });
+            return acc;
+        }, []);
+    }
+
+    function appendLedgerHistoryEntry(contactKey, invoiceNo, action, before, after) {
+        const key = normalizeContactLedgerKey(contactKey || (after && after.contactName) || (before && before.contactName) || '');
+        if (!key) return;
+        const changes = buildLedgerHistoryChanges(before, after);
+        if (!changes.length) return;
+        const store = readLedgerHistoryStore();
+        if (!Array.isArray(store[key])) store[key] = [];
+        store[key].unshift({
+            timestamp: Date.now(),
+            action: action || 'Update',
+            invoiceNo: invoiceNo || (after && after.invoiceNo) || (before && before.invoiceNo) || '-',
+            changes: changes
+        });
+        writeLedgerHistoryStore(store);
+    }
+
+    function renderLedgerHistory(contactKey, ledgerRows) {
+        const body = document.getElementById('ledgerHistoryBody');
+        if (!body) return;
+        const store = readLedgerHistoryStore();
+        const entries = Array.isArray(store[contactKey]) ? store[contactKey] : [];
+        if (!entries.length) {
+            body.innerHTML = '<div class="ledger-history-empty">No history yet for this ledger.</div>';
+            return;
+        }
+        body.innerHTML = entries.map(function(entry) {
+            const changeHtml = (entry.changes || []).map(function(ch) {
+                return '<div class="ledger-history-change"><span>' + escapeHtml(ch.label) + '</span><strong>' + escapeHtml(ch.before) + ' -> ' + escapeHtml(ch.after) + '</strong></div>';
+            }).join('');
+            return '<div class="ledger-history-item"><div class="ledger-history-top"><strong>' + escapeHtml(entry.action || 'Update') + '</strong><span>' + escapeHtml(formatLedgerHistoryTimestamp(entry.timestamp)) + '</span></div><div class="ledger-history-meta">Invoice: ' + escapeHtml(entry.invoiceNo || '-') + '</div><div class="ledger-history-changes">' + changeHtml + '</div></div>';
+        }).join('');
+    }
     function openAddRecordsModal() {
         const modal = document.getElementById('addRecordsModal');
         if (!modal) return;
@@ -4329,6 +4653,127 @@
         });
     }
 
+    function readLedgerHistoryStore() {
+        try {
+            const store = JSON.parse(localStorage.getItem(LEDGER_HISTORY_KEY) || '{}');
+            return store && typeof store === 'object' && !Array.isArray(store) ? store : {};
+        } catch (error) {
+            localStorage.removeItem(LEDGER_HISTORY_KEY);
+            return {};
+        }
+    }
+
+    function writeLedgerHistoryStore(store) {
+        try {
+            localStorage.setItem(LEDGER_HISTORY_KEY, JSON.stringify(store && typeof store === 'object' ? store : {}));
+        } catch (error) {
+            console.warn('Ledger history save failed:', error);
+        }
+    }
+
+    function formatLedgerHistoryTimestamp(ts) {
+        const d = new Date(ts || Date.now());
+        if (isNaN(d)) return '-';
+        return d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    }
+
+    function getLedgerRowValue(row, name) {
+        const idx = getColIndex(name);
+        return idx !== -1 ? showSheetText(row[idx]).trim() : '';
+    }
+
+    function captureLedgerSnapshotFromRow(row = []) {
+        return {
+            invoiceNo: getLedgerRowValue(row, 'INVOICE NO.'),
+            date: getLedgerRowValue(row, 'DATE'),
+            contactName: getLedgerRowValue(row, 'CONTACT NO. OR NAME'),
+            bankOwner: getLedgerRowValue(row, 'BANK OWNER NAME'),
+            state: getLedgerRowValue(row, 'STATE'),
+            purpose: getLedgerRowValue(row, 'PURPOSE'),
+            serviceRemarks: getLedgerRowValue(row, 'SERVICE CHARGE REMARKS'),
+            loginId: getLedgerRowValue(row, 'LOGIN ID'),
+            dealingAmount: getLedgerRowValue(row, 'DEALING AMOUNT'),
+            amountDeno: getLedgerRowValue(row, 'AMOUNT DENO'),
+            receivedAmount: getLedgerRowValue(row, 'RECEIVED AMOUNT'),
+            idActivationAmount: getLedgerRowValue(row, 'ID ACTIVATION AMOUNT'),
+            uploadingAmount: getLedgerRowValue(row, 'UPLOADING OR SETUP AMOUNT'),
+            utrNo: getLedgerRowValue(row, 'UTR / TRN NO.'),
+            paymentStatus: getLedgerRowValue(row, 'PAYMENT STATUS'),
+            remarks: getLedgerRowValue(row, 'REMARKS')
+        };
+    }
+
+    function formatLedgerHistoryValue(field, value) {
+        const text = (value === null || value === undefined ? '' : value).toString().trim();
+        if (!text) return '-';
+        if (field === 'date') return formatDisplayDate(text) || text;
+        if (['dealingAmount', 'amountDeno', 'receivedAmount', 'idActivationAmount', 'uploadingAmount'].includes(field)) {
+            const num = parseFloat(text);
+            return isNaN(num) ? text : 'Rs. ' + num.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        }
+        return text;
+    }
+
+    function buildLedgerHistoryChanges(before, after) {
+        const fields = [
+            ['date', 'Date'],
+            ['contactName', 'Contact'],
+            ['bankOwner', 'Bank Name'],
+            ['state', 'State'],
+            ['purpose', 'Purpose'],
+            ['serviceRemarks', 'Service Remarks'],
+            ['loginId', 'Login ID'],
+            ['dealingAmount', 'Dealing Amount'],
+            ['amountDeno', 'Amount Deno'],
+            ['receivedAmount', 'Received Amount'],
+            ['idActivationAmount', 'ID Activation Amount'],
+            ['uploadingAmount', 'Uploading Amount'],
+            ['utrNo', 'UTR / TRN NO.'],
+            ['paymentStatus', 'Payment Status'],
+            ['remarks', 'Remarks']
+        ];
+        return fields.reduce((acc, pair) => {
+            const key = pair[0];
+            const label = pair[1];
+            const beforeText = formatLedgerHistoryValue(key, before && before[key]);
+            const afterText = formatLedgerHistoryValue(key, after && after[key]);
+            if (beforeText !== afterText) acc.push({ label: label, before: beforeText, after: afterText });
+            return acc;
+        }, []);
+    }
+
+    function appendLedgerHistoryEntry(contactKey, invoiceNo, action, before, after) {
+        const key = normalizeContactLedgerKey(contactKey || (after && after.contactName) || (before && before.contactName) || '');
+        if (!key) return;
+        const changes = buildLedgerHistoryChanges(before, after);
+        if (!changes.length) return;
+        const store = readLedgerHistoryStore();
+        if (!Array.isArray(store[key])) store[key] = [];
+        store[key].unshift({
+            timestamp: Date.now(),
+            action: action || 'Update',
+            invoiceNo: invoiceNo || (after && after.invoiceNo) || (before && before.invoiceNo) || '-',
+            changes: changes
+        });
+        writeLedgerHistoryStore(store);
+    }
+
+    function renderLedgerHistory(contactKey, ledgerRows) {
+        const body = document.getElementById('ledgerHistoryBody');
+        if (!body) return;
+        const store = readLedgerHistoryStore();
+        const entries = Array.isArray(store[contactKey]) ? store[contactKey] : [];
+        if (!entries.length) {
+            body.innerHTML = '<div class="ledger-history-empty">No history yet for this ledger.</div>';
+            return;
+        }
+        body.innerHTML = entries.map(function(entry) {
+            const changeHtml = (entry.changes || []).map(function(ch) {
+                return '<div class="ledger-history-change"><span>' + escapeHtml(ch.label) + '</span><strong>' + escapeHtml(ch.before) + ' -> ' + escapeHtml(ch.after) + '</strong></div>';
+            }).join('');
+            return '<div class="ledger-history-item"><div class="ledger-history-top"><strong>' + escapeHtml(entry.action || 'Update') + '</strong><span>' + escapeHtml(formatLedgerHistoryTimestamp(entry.timestamp)) + '</span></div><div class="ledger-history-meta">Invoice: ' + escapeHtml(entry.invoiceNo || '-') + '</div><div class="ledger-history-changes">' + changeHtml + '</div></div>';
+        }).join('');
+    }
     function openAddRecordsModal() {
         const modal = document.getElementById('addRecordsModal');
         if (!modal) return;
@@ -4614,6 +5059,9 @@
 </script>
 </body>
 </html>
+
+
+
 
 
 
