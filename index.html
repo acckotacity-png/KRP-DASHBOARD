@@ -181,6 +181,16 @@
         .form-group label.required::after { content: " *"; color: #ee5d50; }
         .form-group input, .form-group select, .form-group textarea { padding: 10px; border: 1px solid #e0e5f2; border-radius: 8px; font-size: 13px; background: white; outline: none; }
         .btn-submit { background: #4318ff; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 15px; width: 100%; max-width: 250px; }
+        .btn-submit.btn-secondary { background: #a3aed1; }
+        .btn-submit.btn-warning { background: #ff9800; }
+        .btn-submit.btn-dark { background: #1b2559; }
+        .defaulter-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 15px 0 18px; }
+        .defaulter-summary-item { background: #f4f7fe; border: 1px solid #e0e5f2; border-radius: 10px; padding: 10px 12px; }
+        .defaulter-summary-item span { display: block; font-size: 11px; color: #a3aed1; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+        .defaulter-summary-item strong { display: block; font-size: 14px; color: #1b2559; word-break: break-word; }
+        .defaulter-note { font-size: 12px; color: #ee5d50; font-weight: 700; margin-top: 8px; }
+        .defaulter-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+        .defaulter-actions .btn-submit { flex: 1 1 140px; max-width: none; margin-top: 0; }
         
         .multi-select-container { position: relative; }
         .multi-select-display { padding: 10px; border: 1px solid #e0e5f2; border-radius: 8px; font-size: 13px; cursor: pointer; background: #fff; min-height: 40px; display: flex; align-items: center; justify-content: space-between; color: #777; }
@@ -198,6 +208,8 @@
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 20, 55, 0.8); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 15px; overflow-y: auto; }
         .modal-overlay.active { display: flex; }
         #fullEditModal.active, #paymentModal.active { z-index: 2100; }
+        #defaulterWarningModal.active { z-index: 2150; }
+        #invoicePreviewModal.active { z-index: 2200; }
         .modal-content { background: white; padding: 20px; border-radius: 24px; width: 100%; max-width: 400px; }
         .modal-content.large-modal { max-width: 900px; margin: auto; border-radius: 15px; }
         .modal-header { font-size: 18px; font-weight: 700; color: #1b2559; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0e5f2; padding-bottom: 12px; }
@@ -518,7 +530,7 @@
         <div class="view-filter">
             <button class="btn-upi" onclick="openUpiModal()"><i class="fas fa-wallet"></i> UPI ID</button>
             <button class="btn-settings" onclick="openSettingsModal()"><i class="fas fa-cog"></i> Settings</button>
-            <button class="btn-upi" onclick="openLegacyRecordsIndex()"><i class="fas fa-file-code"></i> Open INDEX</button>
+            <button class="btn-upi" onclick="openLegacyRecordsIndex()">KRP Transection</button>
             <div class="tracker-dashboard-only tracker-dashboard-controls">
                 <select id="mainMonthFilter" onchange="handleMainMonthFilterChange()" title="Filter by month"><option value="all">All Months</option></select>
                 <button class="btn-toggle-view" onclick="toggleViewMode()" id="viewModeBtn"><i class="fas fa-mobile-alt"></i> Mobile View</button>
@@ -633,6 +645,31 @@
                 </div>
                 <button type="submit" class="btn-submit" style="max-width:none;"><i class="fas fa-save"></i> Save Record</button>
             </form>
+        </div>
+    </div>
+
+    <div id="defaulterWarningModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 560px;">
+            <div class="modal-header">
+                <span><i class="fas fa-triangle-exclamation"></i> Pending Payment Found</span>
+                <i class="fas fa-times close-modal" onclick="closeDefaulterWarningModal()"></i>
+            </div>
+            <p style="font-size: 13px; color: #1b2559; line-height: 1.5;" id="defaulterWarningText">
+                This customer already has an open pending payment record.
+            </p>
+            <div id="defaulterWarningDetails" class="defaulter-summary-grid"></div>
+            <div class="defaulter-note">Preview button se aap defaulter ka existing record dekh sakte hain.</div>
+            <div class="defaulter-actions">
+                <button type="button" class="btn-submit btn-dark" onclick="previewDefaulterRecord()">
+                    <i class="fas fa-eye"></i> Preview
+                </button>
+                <button type="button" class="btn-submit btn-warning" onclick="acknowledgeDefaulterWarning(true)">
+                    <i class="fas fa-check"></i> Yes
+                </button>
+                <button type="button" class="btn-submit btn-secondary" onclick="acknowledgeDefaulterWarning(false)">
+                    <i class="fas fa-arrow-right"></i> No
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1084,6 +1121,8 @@
     let isTrackerRefreshInProgress = false;
     let activeLedgerKey = '';
     let activeLedgerTitle = '';
+    let activeDefaulterMatch = null;
+    let dismissedDefaulterLookupKey = '';
     let currentIdActivationSerialMap = new Map();
 
     // ─── INIT ─────────────────────────────────────────────────────
@@ -1170,6 +1209,7 @@
         populatePurposeYears();
         loadSavedBusinessSettings();
         wireContactAutofill();
+        wireDefaulterWarningLookup();
         bindRecordValidation('');
         bindRecordValidation('edit_');
         if (window.innerWidth < 768) toggleViewMode();
@@ -1413,6 +1453,8 @@
             document.body.classList.add('form-view');
             document.getElementById('formTab').classList.add('active');
             document.querySelector('[data-tab="form"]').classList.add('active');
+            dismissedDefaulterLookupKey = '';
+            activeDefaulterMatch = null;
             generateInvoiceNo();
         } else if (tab === 'dashboard') {
             document.body.classList.remove('form-view');
@@ -1620,6 +1662,172 @@
     }
     function handleWhatsAppTargetChange() {
         toggleWhatsAppTargetInput();
+    }
+
+    function normalizeDefaulterLookupValue(value) {
+        const text = showSheetText(value).trim().replace(/\s+/g, ' ');
+        if (!text) return '';
+        const mobile = normalizeMobile10(text);
+        return mobile ? `mobile:${mobile}` : `text:${text.toLowerCase()}`;
+    }
+
+    function getDefaulterLookupKeys(row) {
+        const idxContact = getColIndex('CONTACT NO. OR NAME');
+        const idxLogin = getColIndex('LOGIN ID');
+        const keys = new Set();
+        if (idxContact !== -1) {
+            const key = normalizeDefaulterLookupValue(row[idxContact]);
+            if (key) keys.add(key);
+        }
+        if (idxLogin !== -1) {
+            const key = normalizeDefaulterLookupValue(row[idxLogin]);
+            if (key) keys.add(key);
+        }
+        return keys;
+    }
+
+    function findPendingDefaulterMatch() {
+        const contactInput = document.getElementById('contactName')?.value || '';
+        const loginInput = document.getElementById('loginId')?.value || '';
+        const lookupKeys = [contactInput, loginInput].map(normalizeDefaulterLookupValue).filter(Boolean);
+        if (!lookupKeys.length || !currentHeaders.length || !currentData.length) return null;
+
+        const idxInv = getColIndex('INVOICE NO.');
+        const idxDate = getColIndex('DATE');
+        const idxStatus = getColIndex('PAYMENT STATUS');
+        const idxDeal = getColIndex('DEALING AMOUNT');
+        const idxRecv = getColIndex('RECEIVED AMOUNT');
+        const idxRemarks = getColIndex('REMARKS');
+
+        const matches = [];
+        currentData.forEach((row, rowIndex) => {
+            const status = (idxStatus !== -1 ? (row[idxStatus] || '') : '').toString().toUpperCase();
+            const deal = idxDeal !== -1 ? (parseFloat(row[idxDeal]) || 0) : 0;
+            const received = idxRecv !== -1 ? (parseFloat(row[idxRecv]) || 0) : 0;
+            const due = Math.max(deal - received, 0);
+            if (due <= 0) return;
+            if (status !== 'PENDING' && status !== 'PARTIAL') return;
+
+            const rowKeys = getDefaulterLookupKeys(row);
+            const matched = lookupKeys.some(key => rowKeys.has(key));
+            if (!matched) return;
+
+            matches.push({
+                rowIndex,
+                lookupKey: `row:${rowIndex}`,
+                date: idxDate !== -1 ? getLocalISODate(row[idxDate]) : '',
+                invoiceNo: idxInv !== -1 ? showSheetText(row[idxInv]).trim() : '',
+                contact: showSheetText(row[getColIndex('CONTACT NO. OR NAME')]).trim(),
+                loginId: showSheetText(row[getColIndex('LOGIN ID')]).trim(),
+                status,
+                deal,
+                received,
+                due,
+                remarks: idxRemarks !== -1 ? showSheetText(row[idxRemarks]).trim() : ''
+            });
+        });
+
+        matches.sort((a, b) => {
+            if (a.date !== b.date) return b.date.localeCompare(a.date);
+            if (a.due !== b.due) return b.due - a.due;
+            return b.rowIndex - a.rowIndex;
+        });
+        return matches[0] || null;
+    }
+
+    function renderDefaulterWarningDetails(match) {
+        const detailsEl = document.getElementById('defaulterWarningDetails');
+        const textEl = document.getElementById('defaulterWarningText');
+        if (!detailsEl || !match) return;
+
+        if (textEl) {
+            textEl.innerText = 'This customer already has an open pending payment record. Please review the details below before continuing.';
+        }
+
+        detailsEl.innerHTML = `
+            <div class="defaulter-summary-item"><span>Date</span><strong>${escapeHtml(match.date || '-')}</strong></div>
+            <div class="defaulter-summary-item"><span>Invoice</span><strong>${escapeHtml(match.invoiceNo || '-')}</strong></div>
+            <div class="defaulter-summary-item"><span>Login ID</span><strong>${escapeHtml(match.loginId || '-')}</strong></div>
+            <div class="defaulter-summary-item"><span>Status</span><strong>${escapeHtml(match.status || '-')}</strong></div>
+            <div class="defaulter-summary-item"><span>Deal Amount</span><strong>Rs. ${match.deal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></div>
+            <div class="defaulter-summary-item"><span>Received</span><strong>Rs. ${match.received.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></div>
+            <div class="defaulter-summary-item"><span>Pending</span><strong style="color:#ee5d50;">Rs. ${match.due.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></div>
+            <div class="defaulter-summary-item"><span>Contact</span><strong>${escapeHtml(match.contact || '-')}</strong></div>
+            ${match.remarks ? `<div class="defaulter-summary-item" style="grid-column: 1 / -1;"><span>Remarks</span><strong>${escapeHtml(match.remarks)}</strong></div>` : ''}
+        `;
+    }
+
+    function openDefaulterWarningModal(match) {
+        if (!match) return;
+        activeDefaulterMatch = match;
+        renderDefaulterWarningDetails(match);
+        document.getElementById('defaulterWarningModal')?.classList.add('active');
+    }
+
+    function closeDefaulterWarningModal() {
+        document.getElementById('defaulterWarningModal')?.classList.remove('active');
+        activeDefaulterMatch = null;
+    }
+
+    function clearNewEntryFormAfterNo() {
+        const form = document.getElementById('entryForm');
+        if (form) form.reset();
+        const dateEl = document.getElementById('date');
+        if (dateEl) dateEl.value = getLocalISODate(new Date());
+        resetNewFormMultiSelect();
+        generateInvoiceNo();
+        calcNewAmt();
+    }
+
+    function acknowledgeDefaulterWarning(continueAnyway = true) {
+        if (activeDefaulterMatch) {
+            dismissedDefaulterLookupKey = activeDefaulterMatch.lookupKey || '';
+        }
+        closeDefaulterWarningModal();
+        if (!continueAnyway) {
+            clearNewEntryFormAfterNo();
+            switchTab('tracker');
+            loadTrackerData(true);
+        }
+    }
+
+    function openRecordPreview(rowIndex) {
+        if (rowIndex === null || rowIndex === undefined || rowIndex === '') return;
+        selectedRowForPrint = rowIndex;
+        generateDoc('INVOICE');
+    }
+
+    function previewDefaulterRecord() {
+        if (!activeDefaulterMatch) return;
+        openRecordPreview(activeDefaulterMatch.rowIndex);
+    }
+
+    const checkPendingDefaulterWarning = debounce(function() {
+        const match = findPendingDefaulterMatch();
+        if (!match) {
+            const modalActive = document.getElementById('defaulterWarningModal')?.classList.contains('active');
+            if (modalActive) {
+                activeDefaulterMatch = null;
+                closeDefaulterWarningModal();
+            }
+            return;
+        }
+        const lookupKey = match.lookupKey || '';
+        if (lookupKey && lookupKey === dismissedDefaulterLookupKey) return;
+        const modalActive = document.getElementById('defaulterWarningModal')?.classList.contains('active');
+        const activeKey = activeDefaulterMatch ? (activeDefaulterMatch.lookupKey || '') : '';
+        if (modalActive && lookupKey === activeKey) return;
+        openDefaulterWarningModal(match);
+    }, 250);
+
+    function wireDefaulterWarningLookup() {
+        ['contactName', 'loginId'].forEach(id => {
+            const input = document.getElementById(id);
+            if (!input || input.dataset.defaulterWired === '1') return;
+            input.addEventListener('input', () => checkPendingDefaulterWarning());
+            input.addEventListener('blur', () => checkPendingDefaulterWarning());
+            input.dataset.defaulterWired = '1';
+        });
     }
 
     function getPurposeYearForMessage(purposeValue) {
@@ -3069,6 +3277,11 @@
     // ─── SUBMIT NEW ENTRY ─────────────────────────────────────────
     async function submitNewEntry(event) {
         event.preventDefault();
+        const pendingDefaulter = findPendingDefaulterMatch();
+        if (pendingDefaulter && pendingDefaulter.lookupKey !== dismissedDefaulterLookupKey) {
+            openDefaulterWarningModal(pendingDefaulter);
+            return;
+        }
         if (!validateAndNotifyRecordEntry('')) return;
         const btn = event.target.querySelector('.btn-submit');
         const ogText = btn.innerHTML;
@@ -3102,6 +3315,8 @@
                 document.getElementById('entryForm').reset();
                 document.getElementById('date').value = getLocalISODate(new Date());
                 resetNewFormMultiSelect();
+                activeDefaulterMatch = null;
+                dismissedDefaulterLookupKey = '';
                 switchTab('tracker');
                 loadTrackerData(true);
             } else showMessage('Error saving data', 'error');
@@ -4363,7 +4578,7 @@
     }
 
     function openLegacyRecordsIndex() {
-        const legacyUrl = 'file:///C:/Users/Hello/OneDrive/Desktop/TRIAL/KRP%20DASHBOARD%20TRACKER%20SHEET2/INDEX.html';
+        const legacyUrl = 'https://acckotacity-png.github.io/KRP-RECORDS-TRACKER/';
         window.open(legacyUrl, '_blank', 'noopener');
     }
 
@@ -4399,4 +4614,6 @@
 </script>
 </body>
 </html>
+
+
 
