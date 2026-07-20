@@ -99,7 +99,7 @@
         .date-filter-input { display: none; padding: 10px; border: 1px solid #e0e5f2; border-radius: 8px; outline: none; min-width: 155px; background: white; }
         .btn-outline { border: 1px solid #e0e5f2; background: white; color: #1b2559; padding: 10px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
         .table-wrapper { overflow-x: auto; border-radius: 10px; border: 1px solid #e0e5f2; width: 100%; -webkit-overflow-scrolling: touch; }
-        #dataTable { width: 100%; min-width: 1100px; table-layout: fixed; }
+        #dataTable { width: 100%; min-width: 1280px; table-layout: fixed; }
         #dataTable th, #dataTable td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .table-wrapper:not(.mobile-card-view) #dataTable th:nth-child(1), .table-wrapper:not(.mobile-card-view) #dataTable td:nth-child(1) { width: 16%; min-width: 150px; }
         .table-wrapper:not(.mobile-card-view) #dataTable th:nth-child(2), .table-wrapper:not(.mobile-card-view) #dataTable td:nth-child(2) { width: 9%; min-width: 90px; }
@@ -560,12 +560,11 @@
             </p>
         </div>
         <div class="view-filter">
-            <button class="btn-upi" onclick="openUpiModal()"><i class="fas fa-wallet"></i> UPI ID</button>
+            <button class="btn-upi" onclick="openUpiModal()"><i class="fas fa-wallet"></i> Payment Settings</button>
             <button class="btn-settings" onclick="openSettingsModal()"><i class="fas fa-cog"></i> Settings</button>
             <button class="btn-upi" onclick="openLegacyRecordsIndex()">KRP Transection</button>
             <div class="tracker-dashboard-only tracker-dashboard-controls">
                 <select id="mainMonthFilter" onchange="handleMainMonthFilterChange()" title="Filter by month"><option value="all">All Months</option></select>
-                <button class="btn-toggle-view" onclick="toggleViewMode()" id="viewModeBtn"><i class="fas fa-mobile-alt"></i> Mobile View</button>
             </div>
         </div>
     </div>
@@ -804,6 +803,7 @@
                             <label class="multi-select-option"><input type="checkbox" value="ADVANCE" onchange="updateMultiSelect('serviceRemarks')"> ADVANCE</label>
                             <label class="multi-select-option"><input type="checkbox" value="REMAINING AMOUNT" onchange="updateMultiSelect('serviceRemarks')"> REMAINING AMOUNT</label>
                             <label class="multi-select-option"><input type="checkbox" value="ACTIVATION PENDING" onchange="updateMultiSelect('serviceRemarks')"> ACTIVATION PENDING</label>
+                            <label class="multi-select-option"><input type="checkbox" value="ACTIVATION DONE" onchange="updateMultiSelect('serviceRemarks')"> ACTIVATION DONE</label>
                             <label class="multi-select-option"><input type="checkbox" value="AMT ADJUSTED" onchange="updateMultiSelect('serviceRemarks')"> AMT ADJUSTED</label>
                             <label class="multi-select-option"><input type="checkbox" value="VENDOR" onchange="updateMultiSelect('serviceRemarks')"> VENDOR</label>
                             <label class="multi-select-option"><input type="checkbox" value="OTHER" onchange="updateMultiSelect('serviceRemarks')"> OTHER</label>
@@ -896,6 +896,7 @@
                         <label class="multi-select-option"><input type="checkbox" value="ADVANCE" onchange="updateMultiSelect('edit_serviceRemarks')"> ADVANCE</label>
                         <label class="multi-select-option"><input type="checkbox" value="REMAINING AMOUNT" onchange="updateMultiSelect('edit_serviceRemarks')"> REMAINING AMOUNT</label>
                         <label class="multi-select-option"><input type="checkbox" value="ACTIVATION PENDING" onchange="updateMultiSelect('edit_serviceRemarks')"> ACTIVATION PENDING</label>
+                        <label class="multi-select-option"><input type="checkbox" value="ACTIVATION DONE" onchange="updateMultiSelect('edit_serviceRemarks')"> ACTIVATION DONE</label>
                         <label class="multi-select-option"><input type="checkbox" value="AMT ADJUSTED" onchange="updateMultiSelect('edit_serviceRemarks')"> AMT ADJUSTED</label>
                         <label class="multi-select-option"><input type="checkbox" value="VENDOR" onchange="updateMultiSelect('edit_serviceRemarks')"> VENDOR</label>
                         <label class="multi-select-option"><input type="checkbox" value="OTHER" onchange="updateMultiSelect('edit_serviceRemarks')"> OTHER</label>
@@ -1028,16 +1029,28 @@
 <div id="upiModal" class="modal-overlay">
     <div class="modal-content" style="max-width: 420px;">
         <div class="modal-header">
-            <span><i class="fas fa-wallet"></i> Merchant UPI ID</span>
+            <span><i class="fas fa-wallet"></i> Payment Settings</span>
             <i class="fas fa-times close-modal" onclick="closeUpiModal()"></i>
         </div>
-        <p style="font-size: 12px; color: #a3aed1; margin-bottom: 14px;">QR code aur payment link isi UPI ID par generate honge.</p>
+        <p style="font-size: 12px; color: #a3aed1; margin-bottom: 14px;">UPI, bank account aur IFSC details yahan save karein. QR code aur payment link UPI ID par generate honge.</p>
         <div class="form-group" style="margin-bottom: 16px;">
             <label class="required">Active UPI VPA</label>
             <input type="text" id="globalUpiId" value="9521867142-5@ybl" placeholder="example@ybl">
         </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+            <label>Account Holder Name</label>
+            <input type="text" id="merchantAccountHolder" autocomplete="name" placeholder="Enter account holder name">
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+            <label>Account Number</label>
+            <input type="text" id="merchantAccountNo" inputmode="numeric" autocomplete="off" placeholder="Enter account number">
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+            <label>IFSC Code</label>
+            <input type="text" id="merchantIfscCode" autocapitalize="characters" autocomplete="off" placeholder="e.g. SBIN0001234" style="text-transform:uppercase;">
+        </div>
         <button type="button" class="btn-submit" style="width:100%; max-width:none; background:#05cd99; margin-top:0;" onclick="updateUPIMessage()">
-            <i class="fas fa-check"></i> Save UPI ID
+            <i class="fas fa-check"></i> Save Payment Settings
         </button>
     </div>
 </div>
@@ -1099,6 +1112,7 @@
                                 <span id="p_fromAddress">Kota, RJ</span><br>
                                 Phone: <span id="p_fromPhone">9521867142</span><br>
                                 <span id="p_fromGst"></span>
+                                <span id="p_fromBankDetails" style="display:none; margin-top:10px; white-space:pre-line;"></span>
                             </td>
                             <td style="text-align: right;">
                                 <strong>To (Customer):</strong><br>
@@ -1263,6 +1277,9 @@
         if(localStorage.getItem('biz_gst')) document.getElementById('bizGst').value = localStorage.getItem('biz_gst');
         if(localStorage.getItem('biz_address')) document.getElementById('bizAddress').value = localStorage.getItem('biz_address');
         if(localStorage.getItem('merchant_upi_id')) document.getElementById('globalUpiId').value = localStorage.getItem('merchant_upi_id');
+        if(localStorage.getItem('merchant_account_holder')) document.getElementById('merchantAccountHolder').value = localStorage.getItem('merchant_account_holder');
+        if(localStorage.getItem('merchant_account_no')) document.getElementById('merchantAccountNo').value = localStorage.getItem('merchant_account_no');
+        if(localStorage.getItem('merchant_ifsc_code')) document.getElementById('merchantIfscCode').value = localStorage.getItem('merchant_ifsc_code');
     }
 
     function openSettingsModal() { document.getElementById('settingsModal').classList.add('active'); }
@@ -1298,6 +1315,17 @@
         document.getElementById('p_fromAddress').innerText = localStorage.getItem('biz_address') || "Kota, RJ";
         const gst = localStorage.getItem('biz_gst');
         document.getElementById('p_fromGst').innerText = gst ? "GSTIN: " + gst : "";
+        const accountHolder = (localStorage.getItem('merchant_account_holder') || '').trim();
+        const accountNo = (localStorage.getItem('merchant_account_no') || '').trim();
+        const ifscCode = (localStorage.getItem('merchant_ifsc_code') || '').trim().toUpperCase();
+        const bankDetailsEl = document.getElementById('p_fromBankDetails');
+        const bankDetailLines = [
+            accountHolder,
+            accountNo ? 'A/C No.: ' + accountNo : '',
+            ifscCode ? 'IFSC Code: ' + ifscCode : ''
+        ].filter(Boolean);
+        bankDetailsEl.textContent = bankDetailLines.join('\n');
+        bankDetailsEl.style.display = bankDetailLines.length ? 'block' : 'none';
 
         document.getElementById('p_docType').innerText = 'INVOICE';
 
@@ -2582,7 +2610,6 @@
         const idxDealing = getColIndex('DEALING AMOUNT');
         const idxAmtDeno = getColIndex('AMOUNT DENO');
         const idxUtr     = getColIndex('UTR / TRN NO.');
-        const idxIdAct   = getColIndex('ID ACTIVATION AMOUNT');
 
         let filtered = currentData.filter(row => {
             if (filters.statusF !== 'all' && idxStatus !== -1 && (row[idxStatus]?.toString().toUpperCase() || '') !== filters.statusF) return false;
@@ -3957,14 +3984,23 @@
     // ─── UPI UPDATE ───────────────────────────────────────────────
     function updateUPIMessage() {
         const upiId = document.getElementById('globalUpiId').value.trim();
+        const accountHolder = document.getElementById('merchantAccountHolder').value.trim();
+        const accountNo = document.getElementById('merchantAccountNo').value.trim();
+        const ifscCode = document.getElementById('merchantIfscCode').value.trim().toUpperCase();
         if (!upiId) {
             showMessage('Please enter a valid UPI ID', 'error');
             return;
         }
         document.getElementById('globalUpiId').value = upiId;
+        document.getElementById('merchantAccountHolder').value = accountHolder;
+        document.getElementById('merchantAccountNo').value = accountNo;
+        document.getElementById('merchantIfscCode').value = ifscCode;
         localStorage.setItem('merchant_upi_id', upiId);
+        localStorage.setItem('merchant_account_holder', accountHolder);
+        localStorage.setItem('merchant_account_no', accountNo);
+        localStorage.setItem('merchant_ifsc_code', ifscCode);
         closeUpiModal();
-        showMessage(`UPI ID updated to: ${upiId}`, 'success');
+        showMessage('Payment settings saved successfully!', 'success');
     }
 
     // ─── MESSAGES ─────────────────────────────────────────────────
