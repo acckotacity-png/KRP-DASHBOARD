@@ -1195,7 +1195,14 @@
     }
 
     function ensurePdfLibrary() {
-        return loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js', 'html2pdf');
+        return Promise.all([
+            loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', 'html2canvas'),
+            loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf')
+        ]).then(() => {
+            if (typeof window.html2canvas !== 'function' || !window.jspdf?.jsPDF) {
+                throw new Error('PDF libraries did not initialize');
+            }
+        });
     }
 
     function ensureQrLibrary() {
@@ -1500,43 +1507,70 @@
 
         const renderHost = document.createElement('div');
         renderHost.setAttribute('aria-hidden', 'true');
-        renderHost.style.cssText = 'position:absolute;left:0;top:0;width:720px;background:#fff;z-index:-10000;pointer-events:none;overflow:visible;';
+        renderHost.style.cssText = 'position:absolute;left:0;top:0;width:760px;background:#fff;z-index:-10000;pointer-events:none;overflow:visible;';
+        const captureSurface = document.createElement('div');
+        captureSurface.style.cssText = 'width:760px;padding:16px;box-sizing:border-box;background:#fff;overflow:visible;';
         const element = source.cloneNode(true);
-        element.style.width = '660px';
+        element.style.width = '100%';
         element.style.maxWidth = 'none';
         element.style.margin = '0';
         element.style.boxSizing = 'border-box';
         element.style.background = '#fff';
         element.style.color = '#1b2559';
         element.style.overflow = 'visible';
-        renderHost.appendChild(element);
+        captureSurface.appendChild(element);
+        renderHost.appendChild(captureSurface);
         document.body.appendChild(renderHost);
 
         try {
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             const scale = Math.min(2, Math.max(1.5, window.devicePixelRatio || 1));
-            const renderHeight = Math.ceil(element.scrollHeight);
-            const opt = {
-                margin: 10,
-                filename: getInvoicePdfFilename(),
-                image: { type: 'jpeg', quality: 0.96 },
-                html2canvas: {
-                    scale,
-                    useCORS: true,
-                    allowTaint: false,
-                    backgroundColor: '#ffffff',
-                    logging: false,
-                    scrollX: 0,
-                    scrollY: 0,
-                    width: 720,
-                    height: renderHeight,
-                    windowWidth: 800,
-                    windowHeight: Math.max(1120, renderHeight + 100)
-                },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-                pagebreak: { mode: ['css', 'legacy'], avoid: ['tr.heading', 'tr.item', 'tr.total'] }
-            };
-            const blob = await html2pdf().set(opt).from(element).output('blob');
+            const renderHeight = Math.ceil(captureSurface.scrollHeight);
+            const canvas = await window.html2canvas(captureSurface, {
+                scale,
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                logging: false,
+                scrollX: 0,
+                scrollY: 0,
+                width: 760,
+                height: renderHeight,
+                windowWidth: 900,
+                windowHeight: Math.max(1120, renderHeight + 100)
+            });
+            if (!canvas.width || !canvas.height) throw new Error('Invoice canvas is empty');
+
+            const JsPdf = window.jspdf?.jsPDF || window.jsPDF;
+            if (!JsPdf) throw new Error('PDF engine is unavailable');
+            const pdf = new JsPdf({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+            const margin = 8;
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const imageWidthMm = pageWidth - (margin * 2);
+            const usableHeightMm = pageHeight - (margin * 2);
+            const pixelsPerMm = canvas.width / imageWidthMm;
+            const maxSliceHeight = Math.max(1, Math.floor(usableHeightMm * pixelsPerMm));
+            let sourceY = 0;
+            let pageIndex = 0;
+
+            while (sourceY < canvas.height) {
+                const sliceHeight = Math.min(maxSliceHeight, canvas.height - sourceY);
+                const pageCanvas = document.createElement('canvas');
+                pageCanvas.width = canvas.width;
+                pageCanvas.height = sliceHeight;
+                const context = pageCanvas.getContext('2d');
+                context.fillStyle = '#ffffff';
+                context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+                context.drawImage(canvas, 0, sourceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+                if (pageIndex > 0) pdf.addPage();
+                const sliceHeightMm = sliceHeight / pixelsPerMm;
+                pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.96), 'JPEG', margin, margin, imageWidthMm, sliceHeightMm, undefined, 'FAST');
+                sourceY += sliceHeight;
+                pageIndex += 1;
+            }
+
+            const blob = pdf.output('blob');
             if (!(blob instanceof Blob) || blob.size < 1000) throw new Error('Generated PDF is empty');
             return blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' });
         } finally {
