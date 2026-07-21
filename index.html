@@ -177,6 +177,7 @@
         .action-btn { width: 24px; height: 24px; border-radius: 6px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; flex: 0 0 auto; }
         .btn-whatsapp { background: #e6fcf5; color: #05cd99; }
         .btn-wa-direct { background: #25D366; color: #fff; }
+        .btn-activation-done { background: #dff8f0; color: #008f68; border: 1px solid #9ee6d1; }
         .btn-edit { background: #e6f2ff; color: #4318ff; }
         .btn-config { background: #fff5e6; color: #ff9800; }
         .btn-delete { background: #ffe6e6; color: #ee5d50; }
@@ -1147,7 +1148,10 @@
                     <table style="border:0;">
                         <tr>
                             <td><small id="p_terms" style="color:#777; white-space:pre-line;">* This is a computer generated document, no signature required.</small></td>
-                            <td style="text-align: right; font-weight: bold;">Authorized Signatory</td>
+                            <td style="text-align: right;">
+                                <strong>Authorized Signatory</strong><br>
+                                <small style="color:#777; font-weight:normal;">Digital invoice — signature not required.</small>
+                            </td>
                         </tr>
                     </table>
                 </td>
@@ -2020,6 +2024,39 @@
         showMessage('ID Activation WhatsApp message ready', 'success');
     }
 
+    function buildActivationDoneWhatsAppMessage(record) {
+        const idxLogin = getColIndex('LOGIN ID');
+        const idxPurpose = getColIndex('PURPOSE');
+        const loginId = idxLogin !== -1 ? showSheetText(record[idxLogin]).trim() : '';
+        const purposeYear = idxPurpose !== -1 ? getPurposeYearForMessage(record[idxPurpose]) : '';
+        return `👋 *Hi!*\n\n` +
+            `✅ *ID ACTIVATION SUCCESSFUL*\n` +
+            `━━━━━━━━━━━━━━\n` +
+            `🔐 *LOGIN ID:* ${loginId || '-'}\n` +
+            `📌 *PURPOSE & YEAR:* ${purposeYear || '-'}\n` +
+            `━━━━━━━━━━━━━━\n\n` +
+            `🎉 *YOUR ID ACTIVATION IS DONE!*\n\n` +
+            `⚠️ *IMPORTANT NOTE*\n` +
+            `Agar uploading ruk gayi hai, to page ko *REFRESH* kar lein. Agar phir bhi start na ho, to user ko *AGAIN CREATE* karke uploading dobara start karein.\n\n` +
+            `🛍️ *THANK YOU FOR PURCHASING!*\n` +
+            `🙏 _We appreciate your trust._`;
+    }
+
+    function sendActivationDoneWhatsApp(rowIndex) {
+        const record = currentData[rowIndex];
+        if (!record) return;
+        const idxContact = getColIndex('CONTACT NO. OR NAME');
+        const contactText = idxContact !== -1 ? showSheetText(record[idxContact]).trim() : '';
+        const phone = normalizeWhatsAppPhone(contactText);
+        if (!phone) {
+            showMessage('User ka valid WhatsApp number nahi mila', 'error');
+            return;
+        }
+        const message = buildActivationDoneWhatsAppMessage(record);
+        window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`, '_blank', 'noopener');
+        showMessage('Activation Done WhatsApp message ready', 'success');
+    }
+
     function openContactLedger(rowIndex) {
         const record = currentData[rowIndex];
         const idxContact = getColIndex('CONTACT NO. OR NAME');
@@ -2762,6 +2799,7 @@
                     <div class="action-icons">
                         ${callButtonHtml}
                         <button type="button" class="action-btn btn-whatsapp" onclick="openQRAndShare(${originalIdx})" title="Share on WhatsApp"><i class="fab fa-whatsapp"></i></button>
+                        <button type="button" class="action-btn btn-activation-done" onclick="sendActivationDoneWhatsApp(${originalIdx})" title="Send Activation Done Message"><i class="fas fa-check-circle"></i></button>
                         ${idActivationButtonHtml}
                         ${reminderButtonHtml}
                         ${smsReminderButtonHtml}
