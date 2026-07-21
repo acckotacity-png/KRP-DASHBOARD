@@ -309,6 +309,10 @@
         .invoice-status.pending { background: #fff5e6; color: #c56d00; }
         .invoice-status.failed { background: #ffe6e6; color: #d13d31; }
         .invoice-status.refund { background: #e6f2ff; color: #4318ff; }
+        .invoice-terms { margin-top: 8px; padding-top: 12px; border-top: 1px solid #d8deef; color: #5b6384; }
+        .invoice-terms-title { margin-bottom: 7px; color: #1b2559; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; }
+        .invoice-terms ol { margin: 0; padding-left: 20px; }
+        .invoice-terms li { margin: 0 0 4px; font-size: 10px; line-height: 1.45; break-inside: avoid; page-break-inside: avoid; }
 
         @media (max-width: 768px) {
             body { padding: 8px; }
@@ -740,9 +744,7 @@
                             <th>Status</th><th>Dealing Amt</th><th>Amt Deno</th><th>UTR</th><th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody">
-                        <tr><td colspan="9" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
-                    </tbody>
+                    <tbody id="tableBody"></tbody>
                 </table>
             </div>
         </div>
@@ -1081,7 +1083,7 @@
         <div id="previewContainer" style="background: white; padding: 20px; border-radius: 10px; max-height: 60vh; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 20px;">
         </div>
         <div style="display: flex; gap: 15px;">
-            <button class="btn-submit" style="flex:1;" onclick="window.print()"><i class="fas fa-print"></i> Print Document</button>
+            <button class="btn-submit" style="flex:1;" id="downloadPdfBtn" onclick="downloadInvoicePDF()"><i class="fas fa-download"></i> Download PDF</button>
             <button class="btn-submit" style="flex:1; background: #25D366;" id="sharePdfBtn" onclick="shareInvoicePDF()"><i class="fab fa-whatsapp"></i> Share PDF on WhatsApp</button>
         </div>
     </div>
@@ -1144,16 +1146,20 @@
                 </td>
             </tr>
             <tr>
-                <td colspan="2" style="padding-top: 50px;">
-                    <table style="border:0;">
-                        <tr>
-                            <td><small id="p_terms" style="color:#777; white-space:pre-line;">* This is a computer generated document, no signature required.</small></td>
-                            <td style="text-align: right;">
-                                <strong>Authorized Signatory</strong><br>
-                                <small style="color:#777; font-weight:normal;">Digital invoice — signature not required.</small>
-                            </td>
-                        </tr>
-                    </table>
+                <td colspan="2" style="padding-top: 45px; text-align:right;">
+                    <strong>Authorized Signatory</strong><br>
+                    <small style="color:#777; font-weight:normal;">Digital invoice — signature not required.</small>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="padding-top:18px;">
+                    <div class="invoice-terms">
+                        <div class="invoice-terms-title">Terms &amp; Conditions</div>
+                        <ol id="p_terms">
+                            <li>This is a digitally generated invoice.</li>
+                            <li>Signature is not required.</li>
+                        </ol>
+                    </div>
                 </td>
             </tr>
         </table>
@@ -1165,6 +1171,7 @@
     // YAHAN APNA APPS SCRIPT URL ZAROOR PASTE KAREIN
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFrLTW2tMUueKM6z2bk_GzVf1SZp7AFPwdnsVY6jfIouGCJLh57E8mEgDUtTtFUcIM/exec';
     const TRACKER_CACHE_KEY = 'krp_tracker_data_cache_v1';
+    const RECORDS_DATA_CACHE_KEY = 'krp_records_data_cache_v1';
     const RECORDS_TRACKER_DRAFT_KEY = 'krp_records_tracker_draft_v1';
     const RECORDS_TRACKER_CUSTOM_KEY = 'krp_records_tracker_custom_v1';
     const RECORDS_TRACKER_DELETED_KEY = 'krp_records_tracker_deleted_v1';
@@ -1197,10 +1204,12 @@
 
     let currentData = [], currentHeaders = [], isMobileView = false;
     let recordsCurrentData = [], recordsCurrentHeaders = [], recordsCurrentRowNumbers = [], isRecordsRefreshInProgress = false;
+    let recordsRefreshPromise = null;
     let currentQRPayload = null;
     let currentQRCanvas = null;
     let selectedRowForPrint = null;
     let isTrackerRefreshInProgress = false;
+    let trackerRefreshPromise = null;
     let activeLedgerKey = '';
     let activeLedgerTitle = '';
     let activeDefaulterMatch = null;
@@ -1296,8 +1305,13 @@
         bindRecordValidation('edit_');
         if (window.innerWidth < 768) toggleViewMode();
         switchTab('form');
-        loadTrackerData(true);
-        loadRecordsTrackerData(true);
+        loadTrackerData(false);
+        const scheduleRecordsRefresh = () => loadRecordsTrackerData(false);
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(scheduleRecordsRefresh, { timeout: 2500 });
+        } else {
+            setTimeout(scheduleRecordsRefresh, 1200);
+        }
     });
 
     // ─── VYAPAR SETTINGS LOGIC ────────────────────────────────────
@@ -1394,6 +1408,22 @@
     }
     function closePrintChoiceModal() { document.getElementById('printChoiceModal').classList.remove('active'); }
 
+    function renderInvoiceTerms(rawTerms) {
+        const list = document.getElementById('p_terms');
+        if (!list) return;
+        const fallback = ['This is a digitally generated invoice.', 'Signature is not required.'];
+        const items = (rawTerms || '')
+            .split(/\r?\n|;\s*/)
+            .map(item => item.replace(/^\s*(?:\d+[.)]|[-*•])\s*/, '').trim())
+            .filter(Boolean);
+        list.innerHTML = '';
+        (items.length ? items : fallback).forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = item;
+            list.appendChild(li);
+        });
+    }
+
     function generateDoc(type) {
         const record = currentData[selectedRowForPrint];
         if(!record) return;
@@ -1404,7 +1434,7 @@
         document.getElementById('p_fromAddress').innerText = localStorage.getItem('biz_address') || "Kota, RJ";
         const gst = localStorage.getItem('biz_gst');
         document.getElementById('p_fromGst').innerText = gst ? "GSTIN: " + gst : "";
-        document.getElementById('p_terms').innerText = localStorage.getItem('biz_terms') || '* This is a computer generated document, no signature required.';
+        renderInvoiceTerms(localStorage.getItem('biz_terms') || '');
         const accountHolder = (localStorage.getItem('merchant_account_holder') || '').trim();
         const accountNo = (localStorage.getItem('merchant_account_no') || '').trim();
         const ifscCode = (localStorage.getItem('merchant_ifsc_code') || '').trim().toUpperCase();
@@ -1448,10 +1478,101 @@
         closePrintChoiceModal();
         document.getElementById('previewContainer').innerHTML = document.querySelector('.invoice-box').outerHTML;
         document.getElementById('invoicePreviewModal').classList.add('active');
+        // Start loading the PDF engine while the user reviews the invoice.
+        ensurePdfLibrary().catch(error => console.warn('PDF library preload failed:', error));
     }
 
     function closeInvoicePreviewModal() {
         document.getElementById('invoicePreviewModal').classList.remove('active');
+    }
+
+    function getInvoicePdfFilename() {
+        const invoiceNo = (document.getElementById('p_invNo')?.innerText || 'Invoice').trim();
+        return `Invoice_${invoiceNo.replace(/[^a-z0-9_-]+/gi, '_')}.pdf`;
+    }
+
+    async function buildInvoicePdfBlob() {
+        await ensurePdfLibrary();
+        if (document.fonts?.ready) await document.fonts.ready;
+
+        const source = document.querySelector('#printTemplate .invoice-box');
+        if (!source) throw new Error('Invoice template not found');
+
+        const renderHost = document.createElement('div');
+        renderHost.setAttribute('aria-hidden', 'true');
+        renderHost.style.cssText = 'position:absolute;left:0;top:0;width:720px;background:#fff;z-index:-10000;pointer-events:none;overflow:visible;';
+        const element = source.cloneNode(true);
+        element.style.width = '660px';
+        element.style.maxWidth = 'none';
+        element.style.margin = '0';
+        element.style.boxSizing = 'border-box';
+        element.style.background = '#fff';
+        element.style.color = '#1b2559';
+        element.style.overflow = 'visible';
+        renderHost.appendChild(element);
+        document.body.appendChild(renderHost);
+
+        try {
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            const scale = Math.min(2, Math.max(1.5, window.devicePixelRatio || 1));
+            const renderHeight = Math.ceil(element.scrollHeight);
+            const opt = {
+                margin: 10,
+                filename: getInvoicePdfFilename(),
+                image: { type: 'jpeg', quality: 0.96 },
+                html2canvas: {
+                    scale,
+                    useCORS: true,
+                    allowTaint: false,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    scrollX: 0,
+                    scrollY: 0,
+                    width: 720,
+                    height: renderHeight,
+                    windowWidth: 800,
+                    windowHeight: Math.max(1120, renderHeight + 100)
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+                pagebreak: { mode: ['css', 'legacy'], avoid: ['tr.heading', 'tr.item', 'tr.total'] }
+            };
+            const blob = await html2pdf().set(opt).from(element).output('blob');
+            if (!(blob instanceof Blob) || blob.size < 1000) throw new Error('Generated PDF is empty');
+            return blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' });
+        } finally {
+            renderHost.remove();
+        }
+    }
+
+    function savePdfBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        // Mobile browsers need the blob URL to remain alive until the download starts.
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+
+    async function downloadInvoicePDF() {
+        const btn = document.getElementById('downloadPdfBtn');
+        const oldText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing PDF...';
+        btn.disabled = true;
+        try {
+            const blob = await buildInvoicePdfBlob();
+            savePdfBlob(blob, getInvoicePdfFilename());
+            showMessage('Invoice PDF downloaded!', 'success');
+        } catch (error) {
+            console.error('PDF Download Error:', error);
+            showMessage('PDF download failed. Please try again.', 'error');
+        } finally {
+            btn.innerHTML = oldText;
+            btn.disabled = false;
+        }
     }
 
     async function shareInvoicePDF() {
@@ -1461,36 +1582,31 @@
         btn.disabled = true;
 
         try {
-            await ensurePdfLibrary();
-            const element = document.getElementById('previewContainer').querySelector('.invoice-box');
-            const opt = {
-                margin:       10,
-                filename:     `Invoice_${document.getElementById('p_invNo').innerText}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-            const file = new File([pdfBlob], opt.filename, { type: 'application/pdf' });
+            const pdfBlob = await buildInvoicePdfBlob();
+            const filename = getInvoicePdfFilename();
+            const file = new File([pdfBlob], filename, { type: 'application/pdf', lastModified: Date.now() });
 
             const record = currentData[selectedRowForPrint];
             const contact = showSheetText(record[getColIndex('CONTACT NO. OR NAME')]) || 'Customer';
             const message = `Hello ${contact},\n\nPlease find your requested document attached.\n\nRegards,\n${localStorage.getItem('biz_name') || 'KRP ID Activation'}`;
 
+            let shared = false;
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: 'Document',
-                    text: message,
-                    files: [file]
-                });
-                showMessage('Shared successfully!', 'success');
-            } else {
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(pdfBlob);
-                link.download = opt.filename;
-                link.click();
-                URL.revokeObjectURL(link.href);
+                try {
+                    await navigator.share({
+                        title: 'Invoice PDF',
+                        text: message,
+                        files: [file]
+                    });
+                    shared = true;
+                    showMessage('Shared successfully!', 'success');
+                } catch (shareError) {
+                    if (shareError?.name === 'AbortError') return;
+                    console.warn('Native file share failed; using download fallback.', shareError);
+                }
+            }
+            if (!shared) {
+                savePdfBlob(pdfBlob, filename);
                 
                 const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message + '\n\n(I have downloaded the PDF, I will attach it manually)')}`;
                 window.open(waUrl, '_blank');
@@ -2607,25 +2723,26 @@
     }
 
     async function refreshTrackerDataInBackground(renderAfterRefresh = true) {
-        if (isTrackerRefreshInProgress) return;
+        if (trackerRefreshPromise) return trackerRefreshPromise;
         isTrackerRefreshInProgress = true;
-        try {
-            const response = await fetch(`${APPS_SCRIPT_URL}?action=getData&t=${Date.now()}`);
-            const result = await response.json();
-            if (result.success && result.data) {
-                applyTrackerData(result.headers, result.data);
-                writeTrackerCache(result.headers, result.data);
-                if (renderAfterRefresh) {
-                    renderTable(getTrackerFilters());
+        trackerRefreshPromise = (async () => {
+            try {
+                const response = await fetch(`${APPS_SCRIPT_URL}?action=getData&t=${Date.now()}`, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const result = await response.json();
+                if (result.success && Array.isArray(result.data)) {
+                    applyTrackerData(result.headers, result.data);
+                    writeTrackerCache(result.headers, result.data);
+                    if (renderAfterRefresh) renderTable(getTrackerFilters());
                 }
+            } catch (error) {
+                console.warn('Background tracker refresh failed; cached data retained.', error);
+            } finally {
+                isTrackerRefreshInProgress = false;
+                trackerRefreshPromise = null;
             }
-        } catch (error) {
-            if (!currentData.length) {
-                document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" style="text-align:center;">Connection error</td></tr>';
-            }
-        } finally {
-            isTrackerRefreshInProgress = false;
-        }
+        })();
+        return trackerRefreshPromise;
     }
 
     async function loadTrackerDataLegacy(forceRefresh = false) {
@@ -2649,7 +2766,24 @@
     }
 
     async function loadTrackerData(forceRefresh = false) {
-        return loadTrackerDataLegacy(forceRefresh);
+        const filters = getTrackerFilters();
+        if (!currentHeaders.length) {
+            const cached = readTrackerCache();
+            if (cached) {
+                applyTrackerData(cached.headers, cached.data);
+                renderTable(filters);
+            }
+        } else {
+            renderTable(filters);
+        }
+
+        // Stale-while-revalidate: cached JSON is shown immediately; live data refreshes silently.
+        return refreshTrackerDataInBackground(true);
+    }
+
+    async function ensureFreshTrackerDataForSubmit() {
+        await refreshTrackerDataInBackground(true);
+        generateInvoiceNo();
     }
 
     // ─── RENDER TABLE ─────────────────────────────────────────────
@@ -3600,6 +3734,9 @@
         const ogText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
         btn.disabled = true;
+
+        // Confirm the latest live dataset before locking the next invoice number.
+        await ensureFreshTrackerDataForSubmit();
 
         const formData = new URLSearchParams();
         formData.append('action',            'add');
@@ -4779,34 +4916,67 @@
         return true;
     }
 
-    function loadRecordsTrackerData(forceRefresh = false) {
-        if (isRecordsRefreshInProgress) return;
-        if (!forceRefresh && recordsCurrentData.length) {
-            renderRecordsTracker();
-            return;
+    function readRecordsDataCache() {
+        try {
+            const cached = JSON.parse(localStorage.getItem(RECORDS_DATA_CACHE_KEY) || 'null');
+            if (!cached || !Array.isArray(cached.headers) || !Array.isArray(cached.data)) return null;
+            return cached;
+        } catch (error) {
+            localStorage.removeItem(RECORDS_DATA_CACHE_KEY);
+            return null;
         }
-        const body = document.getElementById('recordsTrackerBody');
-        if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Loading Records...</td></tr>';
+    }
+
+    function writeRecordsDataCache(headers, data, rowNumbers) {
+        try {
+            localStorage.setItem(RECORDS_DATA_CACHE_KEY, JSON.stringify({
+                headers,
+                data,
+                rowNumbers,
+                savedAt: Date.now()
+            }));
+        } catch (error) {
+            console.warn('Records JSON cache save failed:', error);
+        }
+    }
+
+    function applyRecordsData(headers, data, rowNumbers) {
+        recordsCurrentHeaders = Array.isArray(headers) ? headers : [];
+        recordsCurrentData = Array.isArray(data) ? data : [];
+        recordsCurrentRowNumbers = Array.isArray(rowNumbers) ? rowNumbers : recordsCurrentData.map((_, i) => i + 2);
+        renderRecordsTracker();
+    }
+
+    function loadRecordsTrackerData(forceRefresh = false) {
+        if (!recordsCurrentHeaders.length) {
+            const cached = readRecordsDataCache();
+            if (cached) applyRecordsData(cached.headers, cached.data, cached.rowNumbers);
+        } else {
+            renderRecordsTracker();
+        }
+
+        if (recordsRefreshPromise) return recordsRefreshPromise;
         isRecordsRefreshInProgress = true;
-        fetch(`${APPS_SCRIPT_URL}?action=getRecordsData&t=${Date.now()}`)
-            .then(r => r.json())
+        recordsRefreshPromise = fetch(`${APPS_SCRIPT_URL}?action=getRecordsData&t=${Date.now()}`, { cache: 'no-store' })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.json();
+            })
             .then(result => {
                 if (result && result.success) {
-                    recordsCurrentHeaders = Array.isArray(result.headers) ? result.headers : [];
-                    recordsCurrentData = Array.isArray(result.data) ? result.data : [];
-                    recordsCurrentRowNumbers = Array.isArray(result.rowNumbers) ? result.rowNumbers : recordsCurrentData.map((_, i) => i + 2);
-                    renderRecordsTracker();
-                } else {
-                    recordsCurrentHeaders = [];
-                    recordsCurrentData = [];
-                    recordsCurrentRowNumbers = [];
-                    if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px;">No records found</td></tr>';
+                    const headers = Array.isArray(result.headers) ? result.headers : [];
+                    const data = Array.isArray(result.data) ? result.data : [];
+                    const rowNumbers = Array.isArray(result.rowNumbers) ? result.rowNumbers : data.map((_, i) => i + 2);
+                    applyRecordsData(headers, data, rowNumbers);
+                    writeRecordsDataCache(headers, data, rowNumbers);
                 }
             })
-            .catch(() => {
-                if (body) body.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px;">Connection error</td></tr>';
-            })
-            .finally(() => { isRecordsRefreshInProgress = false; });
+            .catch(error => console.warn('Background records refresh failed; cached data retained.', error))
+            .finally(() => {
+                isRecordsRefreshInProgress = false;
+                recordsRefreshPromise = null;
+            });
+        return recordsRefreshPromise;
     }
 
     function getRecordsFilteredRows() {
