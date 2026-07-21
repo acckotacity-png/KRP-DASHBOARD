@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>KRP ID Activation - Dashboard</title>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://script.google.com">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         
@@ -1021,6 +1023,7 @@
             <div class="form-group" style="margin-bottom:10px;"><label>Email Address</label><input type="email" id="bizEmail" value="arjunmalviya166@gmail.com"></div>
             <div class="form-group" style="margin-bottom:10px;"><label>GSTIN (Optional)</label><input type="text" id="bizGst" placeholder="Enter GSTIN if any"></div>
             <div class="form-group" style="margin-bottom:10px;"><label>Business Address</label><textarea id="bizAddress" rows="2">Kota, Rajasthan</textarea></div>
+            <div class="form-group" style="margin-bottom:10px;"><label>Terms &amp; Conditions</label><textarea id="bizTerms" rows="3" placeholder="Invoice terms and conditions"></textarea></div>
             <button type="submit" class="btn-submit" style="width:100%; max-width:none; background:#ff9800;">Save Configuration</button>
         </form>
     </div>
@@ -1143,7 +1146,7 @@
                 <td colspan="2" style="padding-top: 50px;">
                     <table style="border:0;">
                         <tr>
-                            <td><small style="color:#777;">* This is a computer generated document, no signature required.</small></td>
+                            <td><small id="p_terms" style="color:#777; white-space:pre-line;">* This is a computer generated document, no signature required.</small></td>
                             <td style="text-align: right; font-weight: bold;">Authorized Signatory</td>
                         </tr>
                     </table>
@@ -1163,6 +1166,30 @@
     const RECORDS_TRACKER_DELETED_KEY = 'krp_records_tracker_deleted_v1';
     const RECORDS_TRACKER_ARCHIVE_KEY = 'krp_records_tracker_archive_v1';
     const LEDGER_HISTORY_KEY = 'krp_ledger_history_v1';
+    const externalScriptPromises = new Map();
+
+    function loadExternalScript(src, globalName) {
+        if (globalName && window[globalName]) return Promise.resolve();
+        if (externalScriptPromises.has(src)) return externalScriptPromises.get(src);
+        const promise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error(`Unable to load ${src}`));
+            document.head.appendChild(script);
+        });
+        externalScriptPromises.set(src, promise);
+        return promise;
+    }
+
+    function ensurePdfLibrary() {
+        return loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js', 'html2pdf');
+    }
+
+    function ensureQrLibrary() {
+        return loadExternalScript('https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js', 'QRCode');
+    }
 
     let currentData = [], currentHeaders = [], isMobileView = false;
     let recordsCurrentData = [], recordsCurrentHeaders = [], recordsCurrentRowNumbers = [], isRecordsRefreshInProgress = false;
@@ -1251,7 +1278,7 @@
         return `${day}-${month}-${year}`;
     }
 
-    window.onload = function() {
+    document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('date').value = getLocalISODate(new Date());
         populateMonthsDropdown();
         initTrackerDateFilter();
@@ -1267,19 +1294,76 @@
         switchTab('form');
         loadTrackerData(true);
         loadRecordsTrackerData(true);
-    };
+    });
 
     // ─── VYAPAR SETTINGS LOGIC ────────────────────────────────────
-    function loadSavedBusinessSettings() {
-        if(localStorage.getItem('biz_name')) document.getElementById('bizName').value = localStorage.getItem('biz_name');
-        if(localStorage.getItem('biz_phone')) document.getElementById('bizPhone').value = localStorage.getItem('biz_phone');
-        if(localStorage.getItem('biz_email')) document.getElementById('bizEmail').value = localStorage.getItem('biz_email');
-        if(localStorage.getItem('biz_gst')) document.getElementById('bizGst').value = localStorage.getItem('biz_gst');
-        if(localStorage.getItem('biz_address')) document.getElementById('bizAddress').value = localStorage.getItem('biz_address');
-        if(localStorage.getItem('merchant_upi_id')) document.getElementById('globalUpiId').value = localStorage.getItem('merchant_upi_id');
-        if(localStorage.getItem('merchant_account_holder')) document.getElementById('merchantAccountHolder').value = localStorage.getItem('merchant_account_holder');
-        if(localStorage.getItem('merchant_account_no')) document.getElementById('merchantAccountNo').value = localStorage.getItem('merchant_account_no');
-        if(localStorage.getItem('merchant_ifsc_code')) document.getElementById('merchantIfscCode').value = localStorage.getItem('merchant_ifsc_code');
+    const SETTINGS_FIELD_MAP = {
+        businessName: ['bizName', 'biz_name'],
+        contactNumber: ['bizPhone', 'biz_phone'],
+        emailAddress: ['bizEmail', 'biz_email'],
+        gstin: ['bizGst', 'biz_gst'],
+        businessAddress: ['bizAddress', 'biz_address'],
+        accountHolderName: ['merchantAccountHolder', 'merchant_account_holder'],
+        accountNumber: ['merchantAccountNo', 'merchant_account_no'],
+        ifsc: ['merchantIfscCode', 'merchant_ifsc_code'],
+        upiId: ['globalUpiId', 'merchant_upi_id'],
+        termsAndConditions: ['bizTerms', 'biz_terms']
+    };
+
+    function getSettingsPayload() {
+        return Object.keys(SETTINGS_FIELD_MAP).reduce((settings, key) => {
+            const element = document.getElementById(SETTINGS_FIELD_MAP[key][0]);
+            settings[key] = element ? element.value.trim() : '';
+            return settings;
+        }, {});
+    }
+
+    function applyBusinessSettings(settings, persistLocally = true) {
+        if (!settings) return;
+        Object.keys(SETTINGS_FIELD_MAP).forEach(key => {
+            if (!Object.prototype.hasOwnProperty.call(settings, key)) return;
+            const [elementId, storageKey] = SETTINGS_FIELD_MAP[key];
+            const value = settings[key] == null ? '' : String(settings[key]);
+            const element = document.getElementById(elementId);
+            if (element) element.value = key === 'ifsc' ? value.toUpperCase() : value;
+            if (persistLocally) localStorage.setItem(storageKey, value);
+        });
+    }
+
+    function loadLocalSettingsFallback() {
+        const settings = {};
+        let hasCachedValue = false;
+        Object.keys(SETTINGS_FIELD_MAP).forEach(key => {
+            const stored = localStorage.getItem(SETTINGS_FIELD_MAP[key][1]);
+            if (stored !== null) {
+                settings[key] = stored;
+                hasCachedValue = true;
+            }
+        });
+        if (hasCachedValue) applyBusinessSettings(settings, false);
+    }
+
+    async function loadSavedBusinessSettings() {
+        loadLocalSettingsFallback();
+        try {
+            const response = await fetch(`${APPS_SCRIPT_URL}?action=getSettings&t=${Date.now()}`);
+            const result = await response.json();
+            if (result && result.success && result.hasSettings && result.settings) {
+                applyBusinessSettings(result.settings);
+            }
+        } catch (error) {
+            console.warn('Settings load failed; using local fallback.', error);
+        }
+    }
+
+    async function saveAllSettingsToSheet() {
+        const settings = getSettingsPayload();
+        const payload = new URLSearchParams({ action: 'saveSettings', ...settings });
+        const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload });
+        const result = await response.json();
+        if (!result || !result.success) throw new Error(result?.error || result?.message || 'Settings save failed');
+        applyBusinessSettings(result.settings || settings);
+        return result;
     }
 
     function openSettingsModal() { document.getElementById('settingsModal').classList.add('active'); }
@@ -1287,15 +1371,16 @@
     function openUpiModal() { document.getElementById('upiModal').classList.add('active'); }
     function closeUpiModal() { document.getElementById('upiModal').classList.remove('active'); }
     
-    function saveBusinessSettings(e) {
+    async function saveBusinessSettings(e) {
         e.preventDefault();
-        localStorage.setItem('biz_name', document.getElementById('bizName').value);
-        localStorage.setItem('biz_phone', document.getElementById('bizPhone').value);
-        localStorage.setItem('biz_email', document.getElementById('bizEmail').value);
-        localStorage.setItem('biz_gst', document.getElementById('bizGst').value);
-        localStorage.setItem('biz_address', document.getElementById('bizAddress').value);
-        showMessage("Vyapar Settings Saved Successfully!", "success");
-        closeSettingsModal();
+        try {
+            showMessage('Saving settings...', 'pending');
+            const result = await saveAllSettingsToSheet();
+            showMessage(result.message || 'Business settings saved successfully!', 'success');
+            closeSettingsModal();
+        } catch (error) {
+            showMessage('Settings save nahi hui. Apps Script deployment check karein.', 'error');
+        }
     }
 
     // ─── PRINT LOGIC ──────────────────────────────────────────────
@@ -1315,6 +1400,7 @@
         document.getElementById('p_fromAddress').innerText = localStorage.getItem('biz_address') || "Kota, RJ";
         const gst = localStorage.getItem('biz_gst');
         document.getElementById('p_fromGst').innerText = gst ? "GSTIN: " + gst : "";
+        document.getElementById('p_terms').innerText = localStorage.getItem('biz_terms') || '* This is a computer generated document, no signature required.';
         const accountHolder = (localStorage.getItem('merchant_account_holder') || '').trim();
         const accountNo = (localStorage.getItem('merchant_account_no') || '').trim();
         const ifscCode = (localStorage.getItem('merchant_ifsc_code') || '').trim().toUpperCase();
@@ -1371,6 +1457,7 @@
         btn.disabled = true;
 
         try {
+            await ensurePdfLibrary();
             const element = document.getElementById('previewContainer').querySelector('.invoice-box');
             const opt = {
                 margin:       10,
@@ -1420,6 +1507,7 @@
         if(!record) return;
 
         const upiId = document.getElementById('globalUpiId').value.trim() || '9521867142-5@ybl';
+        const payeeName = document.getElementById('merchantAccountHolder').value.trim() || document.getElementById('bizName').value.trim() || 'KRP ID Activation';
         const clientName = showSheetText(record[getColIndex('CONTACT NO. OR NAME')]) || 'Customer';
         const invoiceNo = record[getColIndex('INVOICE NO.')] || 'INV';
         const dealingAmt = parseFloat(record[getColIndex('DEALING AMOUNT')] || 0);
@@ -1427,7 +1515,7 @@
         const dueAmt = (dealingAmt - receivedAmt).toFixed(2);
         const purpose = record[getColIndex('PURPOSE')] || 'ID Activation Work';
 
-        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=Arjun%20Malviya&am=${dueAmt}&cu=INR&tn=${encodeURIComponent('DUE-' + invoiceNo)}&tr=${invoiceNo}`;
+        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${dueAmt}&cu=INR&tn=${encodeURIComponent('DUE-' + invoiceNo)}&tr=${invoiceNo}`;
         const bizName = localStorage.getItem('biz_name') || "KRP ID Activation";
 
         const messageText = 
@@ -1459,6 +1547,7 @@
         if (!record) return null;
 
         const upiId = document.getElementById('globalUpiId').value.trim() || '9521867142-5@ybl';
+        const payeeName = document.getElementById('merchantAccountHolder').value.trim() || document.getElementById('bizName').value.trim() || 'KRP ID Activation';
         const contactText = showSheetText(record[getColIndex('CONTACT NO. OR NAME')]).trim() || 'Customer';
         const contactPhone = normalizeWhatsAppPhone(contactText);
         const invoice = record[getColIndex('INVOICE NO.')] || 'INV';
@@ -1466,7 +1555,7 @@
         const totalDeal = parseFloat(record[getColIndex('DEALING AMOUNT')] || 0) || 0;
         const receivedAmt = parseFloat(record[getColIndex('RECEIVED AMOUNT')] || 0) || 0;
         const dueAmt = Math.max(totalDeal - receivedAmt, 0);
-        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=Arjun%20Malviya&am=${dueAmt.toFixed(2)}&cu=INR&tn=${encodeURIComponent('DUE-' + invoice)}&tr=${invoice}`;
+        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${dueAmt.toFixed(2)}&cu=INR&tn=${encodeURIComponent('DUE-' + invoice)}&tr=${invoice}`;
         return { upiId, contactText, contactPhone, invoice, purpose, totalDeal, receivedAmt, dueAmt, upiLink };
     }
     function buildSmsReminderMessage(payload) {
@@ -3676,11 +3765,19 @@
         }
     }
 
-    function openQRAndShare(rowIndex, shareMode = 'payment') {
+    async function openQRAndShare(rowIndex, shareMode = 'payment') {
         const record = currentData[rowIndex];
         if (!record) return;
 
+        try {
+            await ensureQrLibrary();
+        } catch (error) {
+            showMessage('QR library load nahi ho paayi. Internet check karein.', 'error');
+            return;
+        }
+
         const upiId      = document.getElementById('globalUpiId').value.trim() || '9521867142-5@ybl';
+        const payeeName   = document.getElementById('merchantAccountHolder').value.trim() || document.getElementById('bizName').value.trim() || 'KRP ID Activation';
         const contactName= showSheetText(record[getColIndex('CONTACT NO. OR NAME')]).trim() || 'Customer';
         const contactPhone = normalizeWhatsAppPhone(contactName);
         const dealingAmtNum = parseFloat(record[getColIndex('DEALING AMOUNT')] || 0) || 0;
@@ -3692,7 +3789,7 @@
         const purpose    = record[getColIndex('PURPOSE')] || 'Payment';
 
         const upiNote = shareMode === 'reminder' ? `DUE-${invoice}` : purpose;
-        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=Arjun%20Malviya&am=${dealingAmt}&cu=INR&tn=${encodeURIComponent(upiNote)}&tr=${invoice}`;
+        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${dealingAmt}&cu=INR&tn=${encodeURIComponent(upiNote)}&tr=${invoice}`;
 
         currentQRPayload = {
             upiId, contactName, contactPhone, dealingAmt, invoice, purpose, upiLink, shareMode,
@@ -3982,7 +4079,7 @@
     }
 
     // ─── UPI UPDATE ───────────────────────────────────────────────
-    function updateUPIMessage() {
+    async function updateUPIMessage() {
         const upiId = document.getElementById('globalUpiId').value.trim();
         const accountHolder = document.getElementById('merchantAccountHolder').value.trim();
         const accountNo = document.getElementById('merchantAccountNo').value.trim();
@@ -3995,12 +4092,14 @@
         document.getElementById('merchantAccountHolder').value = accountHolder;
         document.getElementById('merchantAccountNo').value = accountNo;
         document.getElementById('merchantIfscCode').value = ifscCode;
-        localStorage.setItem('merchant_upi_id', upiId);
-        localStorage.setItem('merchant_account_holder', accountHolder);
-        localStorage.setItem('merchant_account_no', accountNo);
-        localStorage.setItem('merchant_ifsc_code', ifscCode);
-        closeUpiModal();
-        showMessage('Payment settings saved successfully!', 'success');
+        try {
+            showMessage('Saving payment settings...', 'pending');
+            const result = await saveAllSettingsToSheet();
+            closeUpiModal();
+            showMessage(result.message || 'Payment settings saved successfully!', 'success');
+        } catch (error) {
+            showMessage('Payment settings save nahi hui. Apps Script deployment check karein.', 'error');
+        }
     }
 
     // ─── MESSAGES ─────────────────────────────────────────────────
