@@ -30,6 +30,7 @@
         .btn-toggle-view { background: #4318ff; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
         .btn-settings { background: #ff9800; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
         .btn-upi { background: #05cd99; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+        .btn-notepad { background: #7c3aed; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
         body.form-view .tracker-dashboard-only { display: none !important; }
         
         /* Stats Cards */
@@ -83,6 +84,16 @@
         .records-action-btn.delete { background: #ffe6e6; color: #ee5d50; }
         .records-action-btn.add { background: #e6fcf5; color: #05cd99; }
         .records-note { font-size: 11px; color: #7b85a8; margin-top: 8px; line-height: 1.4; }
+        .notepad-form { background: #f8fbff; border: 1px solid #e0e5f2; border-radius: 12px; padding: 15px; margin-bottom: 18px; }
+        .notepad-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
+        .notepad-actions .btn-submit { width: auto; margin-top: 0; }
+        #notepadTable { min-width: 1450px; }
+        #notepadTable td { white-space: normal; vertical-align: top; }
+        .reminder-badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 999px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+        .reminder-upcoming { background: #e6f2ff; color: #4318ff; }
+        .reminder-today { background: #fff5e6; color: #b45309; }
+        .reminder-overdue { background: #ffe6e6; color: #c62828; animation: pulse 2s infinite; }
+        .reminder-done { background: #e6fcf5; color: #008f68; }
         
         /* Tabs */
         .nav-tabs { display: flex; background: white; border-radius: 30px; padding: 5px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); }
@@ -229,6 +240,7 @@
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 20, 55, 0.8); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 15px; overflow-y: auto; }
         .modal-overlay.active { display: flex; }
         #fullEditModal.active, #paymentModal.active { z-index: 2100; }
+        #notepadModal.active { z-index: 2250; }
         #defaulterWarningModal.active { z-index: 2150; }
         #invoicePreviewModal.active { z-index: 2200; }
         .modal-content { background: white; padding: 20px; border-radius: 24px; width: 100%; max-width: 400px; }
@@ -570,6 +582,7 @@
             <button class="btn-upi" onclick="openUpiModal()"><i class="fas fa-wallet"></i> Payment Settings</button>
             <button class="btn-settings" onclick="openSettingsModal()"><i class="fas fa-cog"></i> Settings</button>
             <button class="btn-upi" onclick="openLegacyRecordsIndex()">KRP Transection</button>
+            <button class="btn-notepad" onclick="switchTab('notepad')"><i class="fas fa-note-sticky"></i> Notepad</button>
             <div class="tracker-dashboard-only tracker-dashboard-controls">
                 <select id="mainMonthFilter" onchange="handleMainMonthFilterChange()" title="Filter by month"><option value="all">All Months</option></select>
             </div>
@@ -582,6 +595,50 @@
         <button class="tab-btn active" data-tab="form" onclick="switchTab('form')"><i class="fas fa-pen"></i> Data Entry</button>
         <button class="tab-btn" data-tab="tracker" onclick="switchTab('tracker')"><i class="fas fa-list-ul"></i> Data Tracker</button>
         <button class="tab-btn" data-tab="dashboard" onclick="switchTab('dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</button>
+        <button class="tab-btn" data-tab="notepad" onclick="switchTab('notepad')"><i class="fas fa-note-sticky"></i> Notepad</button>
+    </div>
+
+    <div id="notepadTab" class="tab-content">
+        <div class="tracker-container">
+            <div class="section-title"><i class="fas fa-note-sticky"></i> Task Notepad</div>
+            <div id="notepadModal" class="modal-overlay">
+              <div class="modal-content large-modal" style="max-width:900px; margin:auto;">
+                <div class="modal-header"><span id="notepadModalTitle"><i class="fas fa-note-sticky"></i> Add Notepad Task</span><span class="close-modal" onclick="closeNotepadModal()">&times;</span></div>
+                <form id="notepadForm" class="notepad-form" onsubmit="saveNotepadEntry(event)">
+                <input type="hidden" id="notepadRowIndex" value="">
+                <div class="form-grid">
+                    <div class="form-group"><label class="required">Task Date</label><input type="text" id="noteTaskDate" inputmode="numeric" placeholder="dd-mm-yyyy" pattern="[0-9]{2}-[0-9]{2}-[0-9]{4}" onblur="normalizeNotepadDateField(this);setNotepadReminderDate()" required></div>
+                    <div class="form-group"><label class="required">Contact No</label><input type="tel" id="noteContactNo" inputmode="numeric" oninput="autofillNotepadByMobile(this.value)" required></div>
+                    <div class="form-group"><label>State</label><input type="text" id="noteState"></div>
+                    <div class="form-group"><label>Name</label><input type="text" id="noteName"></div>
+                    <div class="form-group"><label>ID</label><input type="text" id="noteLoginId"></div>
+                    <div class="form-group"><label>Password</label><input type="text" id="notePassword" autocomplete="off"></div>
+                    <div class="form-group" style="grid-column:1/-1;"><label class="required">Task Description</label><textarea id="noteDescription" rows="3" required></textarea></div>
+                    <div class="form-group"><label>Task Status</label><select id="noteTaskStatus"><option>PENDING</option><option>IN PROGRESS</option><option>COMPLETED</option><option>CANCELLED</option></select></div>
+                    <div class="form-group"><label>Payment Date</label><input type="text" id="notePaymentDate" inputmode="numeric" placeholder="dd-mm-yyyy" pattern="[0-9]{2}-[0-9]{2}-[0-9]{4}" onblur="normalizeNotepadDateField(this)"></div>
+                    <div class="form-group"><label>Dealing Amount</label><input type="number" id="noteDealingAmount" min="0" step="0.01" value="0" oninput="calculateNotepadRemaining()"></div>
+                    <div class="form-group"><label>Received Amount</label><input type="number" id="noteReceivedAmount" min="0" step="0.01" value="0" oninput="calculateNotepadRemaining()"></div>
+                    <div class="form-group"><label>Remaining Amount</label><input type="number" id="noteRemainingAmount" value="0" readonly></div>
+                    <div class="form-group"><label>Payment Status</label><select id="notePaymentStatus"><option>PENDING</option><option>PARTIAL</option><option>PAID</option></select></div>
+                    <div class="form-group"><label>Reminder</label><select id="noteReminderPreset" onchange="setNotepadReminderDate()"><option value="1">After 1 Day</option><option value="2">After 2 Days</option><option value="5">After 5 Days</option><option value="custom">Custom Date</option><option value="none">No Reminder</option></select></div>
+                    <div class="form-group"><label>Reminder Date</label><input type="text" id="noteReminderDate" inputmode="numeric" placeholder="dd-mm-yyyy" pattern="[0-9]{2}-[0-9]{2}-[0-9]{4}" onblur="normalizeNotepadDateField(this);document.getElementById('noteReminderPreset').value='custom'"></div>
+                </div>
+                <div class="notepad-actions">
+                    <button type="submit" class="btn-submit" id="notepadSaveBtn"><i class="fas fa-save"></i> Save Task</button>
+                    <button type="button" class="btn-submit btn-secondary" id="notepadCancelBtn" onclick="closeNotepadModal()"><i class="fas fa-times"></i> Cancel</button>
+                </div>
+                </form>
+              </div>
+            </div>
+            <div class="toolbar">
+                <button type="button" class="btn-submit" style="width:auto;margin:0;" onclick="openNotepadModal()"><i class="fas fa-plus"></i> Add Task</button>
+                <input class="search-box" id="notepadSearch" placeholder="Search contact, name, ID or task..." oninput="renderNotepadTable()">
+                <select class="filter-select" id="notepadTaskFilter" onchange="renderNotepadTable()"><option value="all">All Task Status</option><option>PENDING</option><option>IN PROGRESS</option><option>COMPLETED</option><option>CANCELLED</option></select>
+                <select class="filter-select" id="notepadPaymentFilter" onchange="renderNotepadTable()"><option value="all">All Payment Status</option><option>PENDING</option><option>PARTIAL</option><option>PAID</option></select>
+                <button type="button" class="btn-outline" onclick="loadNotepadData(true)"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+            <div class="table-wrapper"><table id="notepadTable"><thead><tr><th>Task Date</th><th>Contact No</th><th>State</th><th>Name</th><th>ID</th><th>Password</th><th>Task Description</th><th>Task Status</th><th>Payment Date</th><th>Dealing</th><th>Received</th><th>Remaining</th><th>Payment Status</th><th>Reminder</th><th>Actions</th></tr></thead><tbody id="notepadTableBody"><tr><td colspan="15" style="text-align:center;">Open Notepad to load tasks</td></tr></tbody></table></div>
+        </div>
     </div>
 
     <div id="dashboardTab" class="tab-content">
@@ -1171,6 +1228,9 @@
     // YAHAN APNA APPS SCRIPT URL ZAROOR PASTE KAREIN
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyFrLTW2tMUueKM6z2bk_GzVf1SZp7AFPwdnsVY6jfIouGCJLh57E8mEgDUtTtFUcIM/exec';
     const TRACKER_CACHE_KEY = 'krp_tracker_data_cache_v1';
+    const NOTEPAD_CACHE_KEY = 'krp_notepad_data_cache_v1';
+    const NOTEPAD_HISTORY_KEY = 'krp_notepad_history_v1';
+    const NOTEPAD_CACHE_TTL = 60000;
     const RECORDS_DATA_CACHE_KEY = 'krp_records_data_cache_v1';
     const RECORDS_TRACKER_DRAFT_KEY = 'krp_records_tracker_draft_v1';
     const RECORDS_TRACKER_CUSTOM_KEY = 'krp_records_tracker_custom_v1';
@@ -1219,6 +1279,7 @@
     let trackerRefreshPromise = null;
     let activeLedgerKey = '';
     let activeLedgerTitle = '';
+    let activeLedgerSource = 'main';
     let activeDefaulterMatch = null;
     let dismissedDefaulterLookupKey = '';
     let currentIdActivationSerialMap = new Map();
@@ -1300,6 +1361,7 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('date').value = getLocalISODate(new Date());
+        resetNotepadForm();
         populateMonthsDropdown();
         initTrackerDateFilter();
         initDashboardFilters();
@@ -1316,8 +1378,10 @@
         const scheduleRecordsRefresh = () => loadRecordsTrackerData(false);
         if ('requestIdleCallback' in window) {
             requestIdleCallback(scheduleRecordsRefresh, { timeout: 2500 });
+            requestIdleCallback(() => loadNotepadData(false), { timeout: 3000 });
         } else {
             setTimeout(scheduleRecordsRefresh, 1200);
+            setTimeout(() => loadNotepadData(false), 1800);
         }
     });
 
@@ -1769,6 +1833,11 @@
             document.getElementById('dashboardTab').classList.add('active');
             document.querySelector('[data-tab="dashboard"]').classList.add('active');
             renderDashboard(getDashboardFilteredData());
+        } else if (tab === 'notepad') {
+            document.body.classList.remove('form-view');
+            document.getElementById('notepadTab').classList.add('active');
+            document.querySelector('[data-tab="notepad"]').classList.add('active');
+            loadNotepadData(false);
         } else {
             document.body.classList.remove('form-view');
             document.getElementById('trackerTab').classList.add('active');
@@ -2218,15 +2287,21 @@
 
         activeLedgerKey = contactKey;
         activeLedgerTitle = contactText;
+        activeLedgerSource = 'main';
         renderContactLedger(contactKey, contactText);
     }
     function refreshActiveContactLedger() {
         const modal = document.getElementById('contactLedgerModal');
         if (activeLedgerKey && modal?.classList.contains('active')) {
-            renderContactLedger(activeLedgerKey, activeLedgerTitle);
+            if (activeLedgerSource === 'notepad') renderNotepadContactLedger(activeLedgerKey, activeLedgerTitle);
+            else renderContactLedger(activeLedgerKey, activeLedgerTitle);
         }
     }
     function renderContactLedger(contactKey, contactText = activeLedgerTitle) {
+        const historyPanel = document.querySelector('#contactLedgerModal .ledger-history-panel');
+        if (historyPanel) historyPanel.style.display = '';
+        const header = document.querySelector('#contactLedgerModal .ledger-table thead tr');
+        if (header) header.innerHTML = '<th>Date</th><th>Invoice</th><th>Status</th><th>Purpose</th><th>Service Remarks</th><th>Login ID</th><th>Deal</th><th>Received</th><th>Balance</th><th>UTR</th><th>Remarks</th><th>Actions</th>';
         const idxContact = getColIndex('CONTACT NO. OR NAME');
         if (idxContact === -1 || !contactKey) return;
 
@@ -2300,6 +2375,7 @@
         document.getElementById('contactLedgerModal').classList.remove('active');
         activeLedgerKey = '';
         activeLedgerTitle = '';
+        activeLedgerSource = 'main';
     }
     function editLedgerRecord(rowIndex) {
         openFullEditModal(rowIndex);
@@ -5431,6 +5507,359 @@
         if (value) value.value = getRelativeLocalISODate(0);
         updateRecordsDateFilterVisibility();
         renderRecordsTracker();
+    }
+
+    let notepadRows = [];
+    let lastNotepadAutofillMobile = '';
+    let notepadRefreshPromise = null;
+    let notepadCacheTimestamp = 0;
+
+    function parseNotepadDate(value) {
+        const text = String(value || '').trim();
+        let match = text.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+        let day, month, year;
+        if (match) { day = +match[1]; month = +match[2]; year = +match[3]; }
+        else {
+            match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!match) return null;
+            year = +match[1]; month = +match[2]; day = +match[3];
+        }
+        const date = new Date(year, month - 1, day);
+        return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day ? date : null;
+    }
+
+    function formatNotepadDate(value) {
+        const date = value instanceof Date ? value : parseNotepadDate(value);
+        if (!date) return value ? String(value) : '';
+        return `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+    }
+
+    function normalizeNotepadDateField(field) {
+        if (!field || !field.value.trim()) return;
+        const date = parseNotepadDate(field.value);
+        if (date) field.value = formatNotepadDate(date);
+    }
+
+    function autofillNotepadByMobile(value) {
+        const mobile = normalizeMobile10(value);
+        if (!mobile) { lastNotepadAutofillMobile = ''; return; }
+        if (mobile === lastNotepadAutofillMobile) return;
+        const currentRow = document.getElementById('notepadRowIndex')?.value;
+        const match = notepadRows.map((row, index) => ({ row, index })).reverse().find(item => {
+            return (currentRow === '' || item.index !== Number(currentRow)) && normalizeMobile10(item.row[1]) === mobile;
+        });
+        if (!match) return;
+        lastNotepadAutofillMobile = mobile;
+        const source = match.row;
+        const fieldMap = [
+            ['noteState', 2], ['noteName', 3], ['noteLoginId', 4], ['notePassword', 5]
+        ];
+        fieldMap.forEach(([id, col]) => {
+            const field = document.getElementById(id);
+            if (field) field.value = source[col] || '';
+        });
+        showMessage('Existing mobile details autofilled', 'success');
+    }
+
+    async function openNotepadLedger(index) {
+        const row = notepadRows[index];
+        if (!row) return;
+        const contactText = showSheetText(row[1]).trim();
+        const contactKey = normalizeContactLedgerKey(contactText);
+        if (!contactKey) return showMessage('Valid contact number not found', 'error');
+        activeLedgerKey = contactKey;
+        activeLedgerTitle = contactText;
+        activeLedgerSource = 'notepad';
+        renderNotepadContactLedger(contactKey, contactText);
+    }
+
+    function readNotepadHistory() {
+        try { return JSON.parse(localStorage.getItem(NOTEPAD_HISTORY_KEY) || '{}') || {}; }
+        catch (error) { return {}; }
+    }
+
+    function appendNotepadHistory(before, after, action) {
+        const contactKey = normalizeContactLedgerKey((after && after[1]) || (before && before[1]) || '');
+        if (!contactKey) return;
+        const labels = ['Task Date','Contact No','State','Name','ID','Password','Task Description','Task Status','Payment Date','Dealing Amount','Received Amount','Remaining Amount','Payment Status','Reminder Date'];
+        const changes = labels.reduce((list, label, index) => {
+            if (index === 5) return list;
+            const oldValue = before && before[index] != null ? String(before[index]) : '';
+            const newValue = after && after[index] != null ? String(after[index]) : '';
+            if (oldValue !== newValue) list.push({ label, before: oldValue || '-', after: newValue || '-' });
+            return list;
+        }, []);
+        if (!changes.length) return;
+        const store = readNotepadHistory();
+        if (!Array.isArray(store[contactKey])) store[contactKey] = [];
+        store[contactKey].unshift({ timestamp: Date.now(), action, changes });
+        store[contactKey] = store[contactKey].slice(0, 50);
+        try { localStorage.setItem(NOTEPAD_HISTORY_KEY, JSON.stringify(store)); } catch (error) {}
+    }
+
+    function renderNotepadLedgerHistory(contactKey) {
+        const body = document.getElementById('ledgerHistoryBody');
+        if (!body) return;
+        const entries = readNotepadHistory()[contactKey] || [];
+        if (!entries.length) {
+            body.innerHTML = '<div class="ledger-history-empty">No Notepad update history yet.</div>';
+            return;
+        }
+        body.innerHTML = entries.map(entry => {
+            const changes = (entry.changes || []).map(change => `<div class="ledger-history-change"><span>${escapeHtml(change.label)}</span><strong>${escapeHtml(change.before)} &rarr; ${escapeHtml(change.after)}</strong></div>`).join('');
+            return `<div class="ledger-history-item"><div class="ledger-history-top"><strong>${escapeHtml(entry.action || 'Update')}</strong><span>${escapeHtml(formatLedgerHistoryTimestamp(entry.timestamp))}</span></div><div class="ledger-history-changes">${changes}</div></div>`;
+        }).join('');
+    }
+
+    function renderNotepadContactLedger(contactKey, contactText) {
+        const ledgerRows = notepadRows.map((row, index) => ({ row, index })).filter(item => normalizeContactLedgerKey(item.row[1]) === contactKey);
+        let totalDeal = 0, totalReceived = 0, totalBalance = 0;
+        const rowsHtml = ledgerRows.map(item => {
+            const row = item.row;
+            const deal = parseFloat(row[9]) || 0;
+            const received = parseFloat(row[10]) || 0;
+            const balance = Math.max(deal - received, 0);
+            totalDeal += deal;
+            totalReceived += received;
+            totalBalance += balance;
+            const taskStatus = String(row[7] || 'PENDING').toUpperCase();
+            const paymentStatus = String(row[12] || 'PENDING').toUpperCase();
+            return `<tr>
+                <td>${escapeHtml(formatNotepadDate(row[0]) || '-')}</td>
+                <td>${escapeHtml(row[3] || '-')}</td>
+                <td>${escapeHtml(row[2] || '-')}</td>
+                <td>${escapeHtml(row[4] || '-')}</td>
+                <td class="ledger-purpose">${escapeHtml(row[6] || '-')}</td>
+                <td><span class="badge ${taskStatus === 'COMPLETED' ? 'badge-success' : 'badge-pending'}">${escapeHtml(taskStatus)}</span></td>
+                <td>${escapeHtml(formatNotepadDate(row[8]) || '-')}</td>
+                <td>${formatLedgerMoney(deal)}</td>
+                <td>${formatLedgerMoney(received)}</td>
+                <td class="ledger-due ${balance > 0 ? 'positive' : ''}">${formatLedgerMoney(balance)}</td>
+                <td><span class="badge ${paymentStatus === 'PAID' ? 'badge-success' : paymentStatus === 'PARTIAL' ? 'badge-partial' : 'badge-pending'}">${escapeHtml(paymentStatus)}</span></td>
+                <td>${getNotepadReminderHtml(row)}</td>
+                <td><button type="button" class="records-action-btn update" onclick="editNotepadFromLedger(${item.index})">Edit</button></td>
+            </tr>`;
+        }).join('');
+        const header = document.querySelector('#contactLedgerModal .ledger-table thead tr');
+        if (header) header.innerHTML = '<th>Task Date</th><th>Name</th><th>State</th><th>ID</th><th>Task</th><th>Task Status</th><th>Payment Date</th><th>Deal</th><th>Received</th><th>Balance</th><th>Payment Status</th><th>Reminder</th><th>Action</th>';
+        document.getElementById('ledgerContactTitle').textContent = contactText;
+        document.getElementById('ledgerSummary').innerHTML = `
+            <div class="ledger-summary-item"><span>Notepad Entries</span><strong>${ledgerRows.length}</strong></div>
+            <div class="ledger-summary-item"><span>Total Deal</span><strong>${formatLedgerMoney(totalDeal)}</strong></div>
+            <div class="ledger-summary-item"><span>Total Received</span><strong>${formatLedgerMoney(totalReceived)}</strong></div>
+            <div class="ledger-summary-item balance"><span>Balance</span><strong>${formatLedgerMoney(totalBalance)}</strong></div>`;
+        document.getElementById('ledgerTableBody').innerHTML = rowsHtml || '<tr><td colspan="13" style="text-align:center;padding:20px;">No Notepad entries found</td></tr>';
+        const historyPanel = document.querySelector('#contactLedgerModal .ledger-history-panel');
+        if (historyPanel) historyPanel.style.display = '';
+        renderNotepadLedgerHistory(contactKey);
+        document.getElementById('contactLedgerModal').classList.add('active');
+    }
+
+    function editNotepadFromLedger(index) {
+        editNotepadEntry(index);
+    }
+
+    function getNotepadCellHtml(value, col, rowIndex) {
+        if (col === 1 && value) {
+            return `<button type="button" class="contact-ledger-link" onclick="openNotepadLedger(${rowIndex})" title="View full ledger">${escapeHtml(showSheetText(value))}</button>`;
+        }
+        if ([9,10,11].includes(col)) return formatMoney(parseFloat(value) || 0);
+        if ([0,8].includes(col)) return escapeHtml(formatNotepadDate(value) || '-');
+        return escapeHtml(value || '-');
+    }
+
+    function calculateNotepadRemaining() {
+        const dealing = parseFloat(document.getElementById('noteDealingAmount')?.value) || 0;
+        const received = parseFloat(document.getElementById('noteReceivedAmount')?.value) || 0;
+        const remaining = Math.max(0, dealing - received);
+        const field = document.getElementById('noteRemainingAmount');
+        if (field) field.value = remaining.toFixed(2);
+        const status = document.getElementById('notePaymentStatus');
+        if (status) status.value = remaining <= 0 && dealing > 0 ? 'PAID' : (received > 0 ? 'PARTIAL' : 'PENDING');
+    }
+
+    function setNotepadReminderDate() {
+        const preset = document.getElementById('noteReminderPreset')?.value || '1';
+        const field = document.getElementById('noteReminderDate');
+        if (!field || preset === 'custom') return;
+        if (preset === 'none') { field.value = ''; return; }
+        const baseText = document.getElementById('noteTaskDate')?.value || formatNotepadDate(new Date());
+        const base = parseNotepadDate(baseText) || new Date();
+        base.setDate(base.getDate() + (parseInt(preset, 10) || 0));
+        field.value = formatNotepadDate(base);
+    }
+
+    function getNotepadReminderHtml(row) {
+        const due = String(row[13] || '').trim();
+        if (!due) return '<span style="color:#a3aed1;">No reminder</span>';
+        const dueDate = parseNotepadDate(due);
+        if (!dueDate) return '<span style="color:#ee5d50;">Invalid date</span>';
+        const todayDate = new Date();
+        todayDate.setHours(0, 0, 0, 0);
+        const days = Math.round((dueDate - todayDate) / 86400000);
+        const isDone = String(row[7] || '').toUpperCase() === 'COMPLETED';
+        if (isDone) return `<span class="reminder-badge reminder-done"><i class="fas fa-check"></i> Completed</span>`;
+        if (days < 0) return `<span class="reminder-badge reminder-overdue"><i class="fas fa-bell"></i> Overdue ${Math.abs(days)}d</span>`;
+        if (days === 0) return '<span class="reminder-badge reminder-today"><i class="fas fa-bell"></i> Due Today</span>';
+        return `<span class="reminder-badge reminder-upcoming"><i class="fas fa-clock"></i> ${days} day${days === 1 ? '' : 's'} left</span>`;
+    }
+
+    function resetNotepadForm() {
+        document.getElementById('notepadForm')?.reset();
+        document.getElementById('notepadRowIndex').value = '';
+        lastNotepadAutofillMobile = '';
+        const today = formatNotepadDate(new Date());
+        document.getElementById('noteTaskDate').value = today;
+        document.getElementById('notePaymentDate').value = today;
+        document.getElementById('noteDealingAmount').value = '0';
+        document.getElementById('noteReceivedAmount').value = '0';
+        document.getElementById('noteRemainingAmount').value = '0.00';
+        document.getElementById('noteReminderPreset').value = '1';
+        setNotepadReminderDate();
+        document.getElementById('notepadSaveBtn').innerHTML = '<i class="fas fa-save"></i> Save Task';
+        document.getElementById('notepadModalTitle').innerHTML = '<i class="fas fa-note-sticky"></i> Add Notepad Task';
+    }
+
+    function openNotepadModal() {
+        resetNotepadForm();
+        document.getElementById('notepadModal')?.classList.add('active');
+        setTimeout(() => document.getElementById('noteContactNo')?.focus(), 100);
+    }
+
+    function closeNotepadModal() {
+        document.getElementById('notepadModal')?.classList.remove('active');
+        resetNotepadForm();
+    }
+
+    function readNotepadCache() {
+        try {
+            const cached = JSON.parse(localStorage.getItem(NOTEPAD_CACHE_KEY) || 'null');
+            return cached && Array.isArray(cached.data) ? cached : null;
+        } catch (error) {
+            localStorage.removeItem(NOTEPAD_CACHE_KEY);
+            return null;
+        }
+    }
+
+    function writeNotepadCache(data) {
+        notepadCacheTimestamp = Date.now();
+        try { localStorage.setItem(NOTEPAD_CACHE_KEY, JSON.stringify({ timestamp: notepadCacheTimestamp, data })); } catch (error) {}
+    }
+
+    async function loadNotepadData(force = false) {
+        const body = document.getElementById('notepadTableBody');
+        let hasVisibleData = notepadRows.length > 0;
+        if (!force && !hasVisibleData) {
+            const cached = readNotepadCache();
+            if (cached) {
+                notepadRows = cached.data;
+                notepadCacheTimestamp = Number(cached.timestamp) || 0;
+                hasVisibleData = true;
+                renderNotepadTable();
+            }
+        } else if (!force && hasVisibleData) {
+            renderNotepadTable();
+        }
+        if (!force && hasVisibleData && Date.now() - notepadCacheTimestamp < NOTEPAD_CACHE_TTL) return notepadRows;
+        if (notepadRefreshPromise) {
+            if (!force) return notepadRefreshPromise;
+            await notepadRefreshPromise;
+        }
+        if (!hasVisibleData && body) body.innerHTML = '<tr><td colspan="15" style="text-align:center;">Loading tasks...</td></tr>';
+        notepadRefreshPromise = (async () => {
+            try {
+                const response = await fetch(`${APPS_SCRIPT_URL}?action=getNotepadData&t=${Date.now()}`, { cache: 'no-store' });
+                const result = await response.json();
+                if (!result.success) throw new Error(result.message || result.error || 'Unable to load tasks');
+                notepadRows = Array.isArray(result.data) ? result.data : [];
+                writeNotepadCache(notepadRows);
+                renderNotepadTable();
+                return notepadRows;
+            } catch (error) {
+                if (!hasVisibleData && body) body.innerHTML = `<tr><td colspan="15" style="text-align:center;color:#ee5d50;">${escapeHtml(error.message)}</td></tr>`;
+                if (force || !hasVisibleData) showMessage(error.message || 'Unable to load Notepad', 'error');
+                return notepadRows;
+            } finally {
+                notepadRefreshPromise = null;
+            }
+        })();
+        return notepadRefreshPromise;
+    }
+
+    function renderNotepadTable() {
+        const body = document.getElementById('notepadTableBody');
+        if (!body) return;
+        const search = (document.getElementById('notepadSearch')?.value || '').trim().toLowerCase();
+        const taskFilter = document.getElementById('notepadTaskFilter')?.value || 'all';
+        const paymentFilter = document.getElementById('notepadPaymentFilter')?.value || 'all';
+        const filtered = notepadRows.map((row, index) => ({ row, index })).filter(({ row }) => {
+            const matchesSearch = !search || row.join(' ').toLowerCase().includes(search);
+            return matchesSearch && (taskFilter === 'all' || String(row[7]).toUpperCase() === taskFilter) && (paymentFilter === 'all' || String(row[12]).toUpperCase() === paymentFilter);
+        });
+        if (!filtered.length) { body.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:24px;">No tasks found</td></tr>'; return; }
+        body.innerHTML = filtered.map(({ row, index }) => `<tr>
+            ${row.slice(0, 13).map((value, col) => `<td>${getNotepadCellHtml(value, col, index)}</td>`).join('')}
+            <td>${getNotepadReminderHtml(row)}</td>
+            <td><div class="records-row-actions"><button class="records-action-btn update" type="button" onclick="editNotepadEntry(${index})">Edit</button><button class="records-action-btn delete" type="button" onclick="deleteNotepadEntry(${index})">Delete</button></div></td>
+        </tr>`).join('');
+    }
+
+    function editNotepadEntry(index) {
+        const row = notepadRows[index];
+        if (!row) return;
+        const ids = ['noteTaskDate','noteContactNo','noteState','noteName','noteLoginId','notePassword','noteDescription','noteTaskStatus','notePaymentDate','noteDealingAmount','noteReceivedAmount','noteRemainingAmount','notePaymentStatus','noteReminderDate'];
+        ids.forEach((id, col) => { const el = document.getElementById(id); if (el) el.value = row[col] == null ? '' : ([0,8,13].includes(col) ? formatNotepadDate(row[col]) : row[col]); });
+        document.getElementById('noteReminderPreset').value = row[13] ? 'custom' : 'none';
+        document.getElementById('notepadRowIndex').value = index;
+        document.getElementById('notepadSaveBtn').innerHTML = '<i class="fas fa-save"></i> Update Task';
+        document.getElementById('notepadModalTitle').innerHTML = '<i class="fas fa-pen-to-square"></i> Update Notepad Task';
+        calculateNotepadRemaining();
+        document.getElementById('notepadModal')?.classList.add('active');
+    }
+
+    async function saveNotepadEntry(event) {
+        event.preventDefault();
+        const taskDate = document.getElementById('noteTaskDate').value.trim();
+        const paymentDate = document.getElementById('notePaymentDate').value.trim();
+        const reminderDate = document.getElementById('noteReminderDate').value.trim();
+        if (!parseNotepadDate(taskDate) || (paymentDate && !parseNotepadDate(paymentDate)) || (reminderDate && !parseNotepadDate(reminderDate))) {
+            showMessage('Please enter a valid date in dd-mm-yyyy format', 'error');
+            return;
+        }
+        calculateNotepadRemaining();
+        const rowIndex = document.getElementById('notepadRowIndex').value;
+        const ids = ['noteTaskDate','noteContactNo','noteState','noteName','noteLoginId','notePassword','noteDescription','noteTaskStatus','notePaymentDate','noteDealingAmount','noteReceivedAmount','noteRemainingAmount','notePaymentStatus','noteReminderDate'];
+        const keys = ['taskDate','contactNo','state','name','loginId','password','taskDescription','taskStatus','paymentDate','dealingAmount','receivedAmount','remainingAmount','paymentStatus','reminderDate'];
+        const beforeRow = rowIndex !== '' && notepadRows[Number(rowIndex)] ? notepadRows[Number(rowIndex)].slice() : [];
+        const afterRow = ids.map(id => document.getElementById(id)?.value || '');
+        const payload = new URLSearchParams();
+        payload.append('action', rowIndex === '' ? 'addNotepad' : 'updateNotepad');
+        if (rowIndex !== '') payload.append('row', rowIndex);
+        ids.forEach((id, i) => payload.append(keys[i], document.getElementById(id)?.value || ''));
+        try {
+            showMessage(rowIndex === '' ? 'Saving task...' : 'Updating task...', 'pending');
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload });
+            const result = await response.json();
+            if (!result.success) throw new Error(result.message || result.error || 'Save failed');
+            appendNotepadHistory(beforeRow, afterRow, rowIndex === '' ? 'Task Created' : 'Task Updated');
+            closeNotepadModal();
+            await loadNotepadData(true);
+            if (activeLedgerSource === 'notepad' && document.getElementById('contactLedgerModal')?.classList.contains('active')) {
+                renderNotepadContactLedger(activeLedgerKey, activeLedgerTitle);
+            }
+            showMessage(result.message || 'Task saved', 'success');
+        } catch (error) { showMessage(error.message || 'Network error', 'error'); }
+    }
+
+    async function deleteNotepadEntry(index) {
+        if (!confirm('Delete this Notepad task permanently?')) return;
+        try {
+            const response = await fetch(`${APPS_SCRIPT_URL}?action=deleteNotepad&row=${index}&t=${Date.now()}`);
+            const result = await response.json();
+            if (!result.success) throw new Error(result.message || result.error || 'Delete failed');
+            await loadNotepadData(true);
+            showMessage(result.message || 'Task deleted', 'success');
+        } catch (error) { showMessage(error.message || 'Network error', 'error'); }
     }
 
     function showMessage(msg, type) {
