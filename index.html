@@ -30,7 +30,7 @@
         .btn-toggle-view { background: #4318ff; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
         .btn-settings { background: #ff9800; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
         .btn-upi { background: #05cd99; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
-        .btn-notepad { background: #7c3aed; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+        .btn-notepad { background: #4318ff; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
         body.form-view .tracker-dashboard-only { display: none !important; }
         
         /* Stats Cards */
@@ -84,9 +84,19 @@
         .records-action-btn.delete { background: #ffe6e6; color: #ee5d50; }
         .records-action-btn.add { background: #e6fcf5; color: #05cd99; }
         .records-note { font-size: 11px; color: #7b85a8; margin-top: 8px; line-height: 1.4; }
-        .notepad-form { background: #f8fbff; border: 1px solid #e0e5f2; border-radius: 12px; padding: 15px; margin-bottom: 18px; }
+        .notepad-form { background: #fff; border: 0; border-radius: 0; padding: 0; margin-bottom: 0; }
         .notepad-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
         .notepad-actions .btn-submit { width: auto; margin-top: 0; }
+        .notepad-search-wrap { position: relative; flex: 1 1 220px; min-width: 160px; }
+        .notepad-search-wrap .search-box { width: 100%; padding-right: 36px; }
+        .notepad-search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border: 0; border-radius: 50%; background: transparent; color: #a3aed1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .notepad-search-clear:hover { background: #ffe6e6; color: #ee5d50; }
+        .notepad-date-picker { position: relative; display: flex; align-items: stretch; }
+        .notepad-date-picker > input[type="text"] { flex: 1; min-width: 0; border-radius: 8px 0 0 8px; }
+        .notepad-calendar-btn { width: 42px; border: 1px solid #e0e5f2; border-left: 0; border-radius: 0 8px 8px 0; background: #f4f7fe; color: #4318ff; cursor: pointer; transition: background .2s, color .2s, border-color .2s; }
+        .notepad-calendar-btn:hover { background: #1b2559; color: #fff; border-color: #1b2559; }
+        .notepad-calendar-btn:focus-visible { outline: 3px solid rgba(67,24,255,.18); outline-offset: 1px; }
+        .notepad-native-date { position: absolute; width: 1px !important; height: 1px; opacity: 0; pointer-events: none; right: 0; bottom: 0; padding: 0 !important; border: 0 !important; }
         #notepadTable { min-width: 1450px; }
         #notepadTable td { white-space: normal; vertical-align: top; }
         .reminder-badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 999px; font-size: 10px; font-weight: 800; white-space: nowrap; }
@@ -353,7 +363,7 @@
                 min-width: 120px;
                 max-width: 100%;
             }
-            .btn-settings, .btn-toggle-view, .btn-upi, .btn-outline {
+            .btn-settings, .btn-toggle-view, .btn-upi, .btn-notepad, .btn-outline {
                 width: auto;
                 flex: 0 0 auto;
                 white-space: nowrap;
@@ -387,7 +397,7 @@
             .tab-btn i { font-size: 12px; }
             .btn-outline { padding: 8px 12px; font-size: 12px; gap: 6px; }
             .btn-outline i { font-size: 12px; }
-            .btn-settings, .btn-toggle-view, .btn-upi { padding: 8px 12px; font-size: 12px; gap: 6px; }
+            .btn-settings, .btn-toggle-view, .btn-upi, .btn-notepad { padding: 8px 12px; font-size: 12px; gap: 6px; }
             .stat-count { font-size: 17px; }
             .stat-amount { font-size: 11px; }
             .stat-info h4 { font-size: 11px; }
@@ -538,7 +548,7 @@
                 padding: 7px 10px;
                 font-size: 12px;
             }
-            .btn-settings, .btn-toggle-view, .btn-upi {
+            .btn-settings, .btn-toggle-view, .btn-upi, .btn-notepad {
                 padding: 7px 10px;
                 font-size: 11px;
                 gap: 5px;
@@ -607,7 +617,7 @@
                 <form id="notepadForm" class="notepad-form" onsubmit="saveNotepadEntry(event)">
                 <input type="hidden" id="notepadRowIndex" value="">
                 <div class="form-grid">
-                    <div class="form-group"><label class="required">Task Date</label><input type="text" id="noteTaskDate" inputmode="numeric" placeholder="dd-mm-yyyy" pattern="[0-9]{2}-[0-9]{2}-[0-9]{4}" onblur="normalizeNotepadDateField(this);setNotepadReminderDate()" required></div>
+                    <div class="form-group"><label class="required">Task Date</label><div class="notepad-date-picker"><input type="text" id="noteTaskDate" placeholder="dd-mm-yyyy" readonly required><button type="button" class="notepad-calendar-btn" onclick="openNotepadDatePicker('noteTaskDate','noteTaskDatePicker')"><i class="fas fa-calendar-days"></i></button><input type="date" class="notepad-native-date" id="noteTaskDatePicker" onchange="selectNotepadDate('noteTaskDate',this,'task')"></div></div>
                     <div class="form-group"><label class="required">Contact No</label><input type="tel" id="noteContactNo" inputmode="numeric" oninput="autofillNotepadByMobile(this.value)" required></div>
                     <div class="form-group"><label>State</label><input type="text" id="noteState"></div>
                     <div class="form-group"><label>Name</label><input type="text" id="noteName"></div>
@@ -615,13 +625,13 @@
                     <div class="form-group"><label>Password</label><input type="text" id="notePassword" autocomplete="off"></div>
                     <div class="form-group" style="grid-column:1/-1;"><label class="required">Task Description</label><textarea id="noteDescription" rows="3" required></textarea></div>
                     <div class="form-group"><label>Task Status</label><select id="noteTaskStatus"><option>PENDING</option><option>IN PROGRESS</option><option>COMPLETED</option><option>CANCELLED</option></select></div>
-                    <div class="form-group"><label>Payment Date</label><input type="text" id="notePaymentDate" inputmode="numeric" placeholder="dd-mm-yyyy" pattern="[0-9]{2}-[0-9]{2}-[0-9]{4}" onblur="normalizeNotepadDateField(this)"></div>
+                    <div class="form-group"><label>Payment Date</label><div class="notepad-date-picker"><input type="text" id="notePaymentDate" placeholder="dd-mm-yyyy" readonly><button type="button" class="notepad-calendar-btn" onclick="openNotepadDatePicker('notePaymentDate','notePaymentDatePicker')"><i class="fas fa-calendar-days"></i></button><input type="date" class="notepad-native-date" id="notePaymentDatePicker" onchange="selectNotepadDate('notePaymentDate',this,'payment')"></div></div>
                     <div class="form-group"><label>Dealing Amount</label><input type="number" id="noteDealingAmount" min="0" step="0.01" value="0" oninput="calculateNotepadRemaining()"></div>
                     <div class="form-group"><label>Received Amount</label><input type="number" id="noteReceivedAmount" min="0" step="0.01" value="0" oninput="calculateNotepadRemaining()"></div>
                     <div class="form-group"><label>Remaining Amount</label><input type="number" id="noteRemainingAmount" value="0" readonly></div>
                     <div class="form-group"><label>Payment Status</label><select id="notePaymentStatus"><option>PENDING</option><option>PARTIAL</option><option>PAID</option></select></div>
                     <div class="form-group"><label>Reminder</label><select id="noteReminderPreset" onchange="setNotepadReminderDate()"><option value="1">After 1 Day</option><option value="2">After 2 Days</option><option value="5">After 5 Days</option><option value="custom">Custom Date</option><option value="none">No Reminder</option></select></div>
-                    <div class="form-group"><label>Reminder Date</label><input type="text" id="noteReminderDate" inputmode="numeric" placeholder="dd-mm-yyyy" pattern="[0-9]{2}-[0-9]{2}-[0-9]{4}" onblur="normalizeNotepadDateField(this);document.getElementById('noteReminderPreset').value='custom'"></div>
+                    <div class="form-group"><label>Reminder Date</label><div class="notepad-date-picker"><input type="text" id="noteReminderDate" placeholder="dd-mm-yyyy" readonly><button type="button" class="notepad-calendar-btn" onclick="openNotepadDatePicker('noteReminderDate','noteReminderDatePicker')"><i class="fas fa-calendar-days"></i></button><input type="date" class="notepad-native-date" id="noteReminderDatePicker" onchange="selectNotepadDate('noteReminderDate',this,'reminder')"></div></div>
                 </div>
                 <div class="notepad-actions">
                     <button type="submit" class="btn-submit" id="notepadSaveBtn"><i class="fas fa-save"></i> Save Task</button>
@@ -632,7 +642,7 @@
             </div>
             <div class="toolbar">
                 <button type="button" class="btn-submit" style="width:auto;margin:0;" onclick="openNotepadModal()"><i class="fas fa-plus"></i> Add Task</button>
-                <input class="search-box" id="notepadSearch" placeholder="Search contact, name, ID or task..." oninput="renderNotepadTable()">
+                <div class="notepad-search-wrap"><input class="search-box" id="notepadSearch" placeholder="Search contact, name, ID or task..." autocomplete="off" oninput="renderNotepadTable()"><button type="button" class="notepad-search-clear" onclick="clearNotepadSearch()" title="Clear search" aria-label="Clear search"><i class="fas fa-times"></i></button></div>
                 <select class="filter-select" id="notepadTaskFilter" onchange="renderNotepadTable()"><option value="all">All Task Status</option><option>PENDING</option><option>IN PROGRESS</option><option>COMPLETED</option><option>CANCELLED</option></select>
                 <select class="filter-select" id="notepadPaymentFilter" onchange="renderNotepadTable()"><option value="all">All Payment Status</option><option>PENDING</option><option>PARTIAL</option><option>PAID</option></select>
                 <button type="button" class="btn-outline" onclick="loadNotepadData(true)"><i class="fas fa-sync-alt"></i> Refresh</button>
@@ -772,7 +782,7 @@
         <div class="tracker-container">
             <div class="section-title"><i class="fas fa-chart-bar"></i> All Transactions</div>
             <div class="toolbar">
-                <input type="text" id="searchInput" class="search-box" placeholder="Search Invoice / Contact / UTR" onkeyup="loadTrackerData(false)">
+                <div class="notepad-search-wrap"><input type="text" id="searchInput" class="search-box" placeholder="Search Invoice / Contact / UTR" autocomplete="off" oninput="loadTrackerData(false)"><button type="button" class="notepad-search-clear" onclick="clearTrackerSearch()" title="Clear search" aria-label="Clear search"><i class="fas fa-times"></i></button></div>
                 <select id="statusFilter" class="filter-select" onchange="loadTrackerData(false)">
                     <option value="all">All Status</option>
                     <option value="SUCCESS">Success</option>
@@ -1375,12 +1385,9 @@
         if (window.innerWidth < 768) toggleViewMode();
         switchTab('form');
         loadTrackerData(false);
-        const scheduleRecordsRefresh = () => loadRecordsTrackerData(false);
         if ('requestIdleCallback' in window) {
-            requestIdleCallback(scheduleRecordsRefresh, { timeout: 2500 });
             requestIdleCallback(() => loadNotepadData(false), { timeout: 3000 });
         } else {
-            setTimeout(scheduleRecordsRefresh, 1200);
             setTimeout(() => loadNotepadData(false), 1800);
         }
     });
@@ -5540,6 +5547,31 @@
         if (date) field.value = formatNotepadDate(date);
     }
 
+    function notepadDateToIso(value) {
+        const date = parseNotepadDate(value);
+        if (!date) return '';
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
+
+    function openNotepadDatePicker(textFieldId, pickerId) {
+        const textField = document.getElementById(textFieldId);
+        const picker = document.getElementById(pickerId);
+        if (!picker) return;
+        picker.value = notepadDateToIso(textField?.value) || getLocalISODate(new Date());
+        try {
+            if (typeof picker.showPicker === 'function') picker.showPicker();
+            else picker.click();
+        } catch (error) { picker.click(); }
+    }
+
+    function selectNotepadDate(textFieldId, picker, dateType) {
+        const textField = document.getElementById(textFieldId);
+        if (!textField || !picker?.value) return;
+        textField.value = formatNotepadDate(picker.value);
+        if (dateType === 'task') setNotepadReminderDate();
+        if (dateType === 'reminder') document.getElementById('noteReminderPreset').value = 'custom';
+    }
+
     function autofillNotepadByMobile(value) {
         const mobile = normalizeMobile10(value);
         if (!mobile) { lastNotepadAutofillMobile = ''; return; }
@@ -5802,6 +5834,22 @@
             <td>${getNotepadReminderHtml(row)}</td>
             <td><div class="records-row-actions"><button class="records-action-btn update" type="button" onclick="editNotepadEntry(${index})">Edit</button><button class="records-action-btn delete" type="button" onclick="deleteNotepadEntry(${index})">Delete</button></div></td>
         </tr>`).join('');
+    }
+
+    function clearNotepadSearch() {
+        const search = document.getElementById('notepadSearch');
+        if (!search) return;
+        search.value = '';
+        renderNotepadTable();
+        search.focus();
+    }
+
+    function clearTrackerSearch() {
+        const search = document.getElementById('searchInput');
+        if (!search) return;
+        search.value = '';
+        loadTrackerData(false);
+        search.focus();
     }
 
     function editNotepadEntry(index) {
