@@ -109,7 +109,7 @@
         #notepadTable { min-width: 0; width: 100%; display: block; background: transparent; }
         #notepadTable thead { display: none; }
         #notepadTable tbody { display: block; width: 100%; }
-        #notepadTable tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; margin-bottom: 16px; padding: 14px; border: 1px solid #dfe5ec; border-radius: 16px; background: linear-gradient(#4f8a8b 0 4px, #fff 4px 100%); box-shadow: 0 8px 24px rgba(27,37,89,.07); transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+        #notepadTable tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; margin-bottom: 16px; padding: 14px; border: 1px solid #dfe5ec; border-radius: 16px; background: #fff; box-shadow: 0 8px 24px rgba(27,37,89,.07); transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
         #notepadTable tbody tr:hover { transform: translateY(-2px); border-color: #b9cdd3; box-shadow: 0 12px 30px rgba(43,108,176,.10); }
         #notepadTable td { display: flex; flex-direction: column; gap: 5px; min-width: 0; padding: 10px 11px; white-space: normal; vertical-align: top; border: 1px solid #edf0f8; border-radius: 10px; background: #f9faff; color: #1b2559; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
         #notepadTable td::before { content: attr(data-label); color: #7b85a8; font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
@@ -118,7 +118,18 @@
         #notepadTable td:nth-child(8), #notepadTable td:nth-child(13), #notepadTable td:nth-child(14) { align-items: flex-start; justify-content: center; }
         #notepadTable td:last-child { background: transparent; border-style: dashed; }
         #notepadTable td:last-child { justify-content: flex-end; }
+        #notepadTable .notepad-card-collapsed .notepad-detail-cell { display: none; }
+        #notepadTable tbody tr.notepad-card-collapsed { grid-template-columns: 105px 150px repeat(4, minmax(90px, 1fr)) auto; align-items: center; gap: 4px; margin-bottom: 2px; padding: 7px 4px; border: 0; border-bottom: 1px solid #e8edf2; border-radius: 0; box-shadow: none; }
+        #notepadTable tbody tr.notepad-card-collapsed:hover { transform: none; box-shadow: none; background: #f8fafb; }
+        #notepadTable .notepad-card-collapsed td { min-height: 0; padding: 4px 7px; border: 0; border-right: 1px solid #edf0f4; border-radius: 0; background: transparent; }
+        #notepadTable .notepad-card-collapsed td::before { font-size: 8px; }
+        #notepadTable .notepad-card-collapsed .notepad-toggle-cell { grid-column: auto; padding-left: 6px; border-right: 0; }
+        #notepadTable .notepad-toggle-cell { grid-column: 1 / -1; display: flex; align-items: flex-end; padding: 2px 0 0; border: 0; background: transparent; }
+        #notepadTable .notepad-toggle-cell::before { display: none; }
+        .notepad-card-toggle { grid-column: 1 / -1; justify-self: end; border: 1px solid #cbdbe2; border-radius: 999px; padding: 5px 12px; background: #eef6f7; color: #28666e; font-size: 10px; font-weight: 800; cursor: pointer; transition: background .18s ease, color .18s ease, transform .18s ease; }
+        .notepad-card-toggle:hover { background: #4f8a8b; color: #fff; transform: translateY(-1px); }
         #notepadTable th:nth-child(1), #notepadTable td:nth-child(1) { white-space: nowrap; min-width: 105px; }
+        #notepadTable td:nth-child(1) { cursor: pointer; user-select: none; }
         #notepadTable th:nth-child(2), #notepadTable td:nth-child(2),
         #notepadTable td:nth-child(2) .contact-ledger-link { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
         .notepad-status-badge { display: inline-flex; align-items: center; justify-content: center; padding: 5px 9px; border-radius: 999px; font-size: 10px; font-weight: 800; white-space: nowrap; }
@@ -135,9 +146,12 @@
         #noteDescription:focus { background: #fff; border-color: #2b6cb0; box-shadow: 0 0 0 3px rgba(43,108,176,.1); }
         @media (max-width: 900px) {
             #notepadTable tbody tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            #notepadTable tbody tr.notepad-card-collapsed { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            #notepadTable .notepad-card-collapsed .notepad-toggle-cell { grid-column: 1 / -1; }
         }
         @media (max-width: 600px) {
             #notepadTable tbody tr { grid-template-columns: 1fr; }
+            #notepadTable tbody tr.notepad-card-collapsed { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             #notepadTable td:nth-child(7) { grid-column: span 1; }
         }
         .reminder-badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 999px; font-size: 10px; font-weight: 800; white-space: nowrap; }
@@ -5889,11 +5903,28 @@
         }).sort((a, b) => b.index - a.index);
         if (!filtered.length) { body.innerHTML = '<tr style="display:block;"><td style="text-align:center;padding:24px;">No tasks found</td></tr>'; return; }
         const notepadLabels = ['Task Date','Contact No','State','Name','ID','Password','Task Description','Task Status','Payment Date','Dealing','Received','Remaining','Payment Status'];
-        body.innerHTML = filtered.map(({ row, index }) => `<tr>
-            ${row.slice(0, 13).map((value, col) => `<td data-label="${notepadLabels[col]}">${getNotepadCellHtml(value, col, index)}</td>`).join('')}
-            <td data-label="Reminder">${getNotepadReminderHtml(row)}</td>
-            <td data-label="Actions"><div class="records-row-actions"><button class="records-action-btn update" type="button" onclick="editNotepadEntry(${index})">Edit</button><button class="records-action-btn delete" type="button" onclick="deleteNotepadEntry(${index})">Delete</button></div></td>
+        body.innerHTML = filtered.map(({ row, index }) => `<tr class="notepad-card-collapsed">
+            ${row.slice(0, 13).map((value, col) => `<td class="${col >= 6 ? 'notepad-detail-cell' : ''}" data-label="${notepadLabels[col]}"${col === 0 ? ' ondblclick="toggleNotepadCardFromDate(this)" title="Double-click to show or hide details"' : ''}>${getNotepadCellHtml(value, col, index)}</td>`).join('')}
+            <td class="notepad-detail-cell" data-label="Reminder">${getNotepadReminderHtml(row)}</td>
+            <td class="notepad-detail-cell" data-label="Actions"><div class="records-row-actions"><button class="records-action-btn update" type="button" onclick="editNotepadEntry(${index})">Edit</button><button class="records-action-btn delete" type="button" onclick="deleteNotepadEntry(${index})">Delete</button></div></td>
+            <td class="notepad-toggle-cell"><button type="button" class="notepad-card-toggle" aria-expanded="false" onclick="toggleNotepadCard(this)">Show <i class="fas fa-chevron-down"></i></button></td>
         </tr>`).join('');
+    }
+
+    function toggleNotepadCard(button) {
+        const card = button.closest('tr');
+        if (!card) return;
+        const isOpening = card.classList.contains('notepad-card-collapsed');
+        card.classList.toggle('notepad-card-collapsed', !isOpening);
+        button.setAttribute('aria-expanded', String(isOpening));
+        button.innerHTML = isOpening
+            ? 'Hide <i class="fas fa-chevron-up"></i>'
+            : 'Show <i class="fas fa-chevron-down"></i>';
+    }
+
+    function toggleNotepadCardFromDate(dateCell) {
+        const button = dateCell.closest('tr')?.querySelector('.notepad-card-toggle');
+        if (button) toggleNotepadCard(button);
     }
 
     function clearNotepadSearch() {
