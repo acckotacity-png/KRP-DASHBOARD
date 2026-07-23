@@ -3187,7 +3187,16 @@
         const bankMap = {};
         const monthMap = {};
         const dailyMap = {};
+        const allDataMonthMap = {};
         let totalDeal = 0, totalReceived = 0, totalDue = 0, totalSetup = 0, totalId = 0;
+
+        currentData.forEach(row => {
+            const dateKey = idxDate !== -1 ? getLocalISODate(row[idxDate]) : '';
+            if (!dateKey) return;
+            const monthKey = dateKey.slice(0, 7);
+            const received = idxRecv !== -1 ? (parseFloat(row[idxRecv]) || 0) : 0;
+            allDataMonthMap[monthKey] = (allDataMonthMap[monthKey] || 0) + received;
+        });
 
         data.forEach(row => {
             const status = (idxStatus !== -1 ? row[idxStatus] : 'PENDING')?.toString().toUpperCase() || 'PENDING';
@@ -3264,14 +3273,23 @@
         document.getElementById('bankChart').innerHTML = renderBarRows(bankItems, Math.max(0, ...bankItems.map(i => i.value)), 'pending');
 
         const now = new Date();
+        const currentSixMonthKeys = Array.from({ length: 6 }, (_, offset) => {
+            const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        });
+        const hasCurrentSixMonthData = currentSixMonthKeys.some(key => (allDataMonthMap[key] || 0) > 0);
+        const latestAvailableMonth = Object.keys(allDataMonthMap).sort().pop();
+        const monthAnchor = !hasCurrentSixMonthData && latestAvailableMonth
+            ? new Date(Number(latestAvailableMonth.slice(0, 4)), Number(latestAvailableMonth.slice(5, 7)) - 1, 1)
+            : now;
         const monthItems = [];
         for (let i = 5; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const d = new Date(monthAnchor.getFullYear(), monthAnchor.getMonth() - i, 1);
             const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
             monthItems.push({
                 label: d.toLocaleString('default', { month: 'short', year: '2-digit' }),
-                value: monthMap[key] || 0,
-                display: formatMoney(monthMap[key] || 0)
+                value: allDataMonthMap[key] || 0,
+                display: formatMoney(allDataMonthMap[key] || 0)
             });
         }
         document.getElementById('monthlyChart').innerHTML = renderBarRows(monthItems, Math.max(0, ...monthItems.map(i => i.value)), 'pending');
@@ -5755,7 +5773,7 @@
                 <td class="ledger-due ${balance > 0 ? 'positive' : ''}">${formatLedgerMoney(balance)}</td>
                 <td><span class="badge ${paymentStatus === 'PAID' ? 'badge-success' : paymentStatus === 'PARTIAL' ? 'badge-partial' : 'badge-pending'}">${escapeHtml(paymentStatus)}</span></td>
                 <td>${getNotepadReminderHtml(row)}</td>
-                <td><button type="button" class="records-action-btn update" onclick="editNotepadFromLedger(${item.index})">Edit</button></td>
+                <td><div class="records-row-actions"><button type="button" class="records-action-btn add" onclick="addNotepadPayment(${item.index})">Add Payment</button><button type="button" class="records-action-btn update" onclick="editNotepadFromLedger(${item.index})">Edit</button></div></td>
             </tr>`;
         }).join('');
         const header = document.querySelector('#contactLedgerModal .ledger-table thead tr');
@@ -5775,6 +5793,63 @@
 
     function editNotepadFromLedger(index) {
         editNotepadEntry(index);
+    }
+
+    async function addNotepadPayment(index) {
+        const row = notepadRows[index];
+        if (!row) return;
+        const dealing = parseFloat(row[9]) || 0;
+        const received = parseFloat(row[10]) || 0;
+        const balance = Math.max(dealing - received, 0);
+        if (balance <= 0) {
+            showMessage('This task has no pending amount', 'error');
+            return;
+        }
+        const entered = prompt(`Pending amount: ${formatMoney(balance)}\nEnter received payment amount:`, balance.toFixed(2));
+        if (entered === null) return;
+        const payment = parseFloat(String(entered).replace(/,/g, ''));
+        if (!Number.isFinite(payment) || payment <= 0) {
+            showMessage('Please enter a valid payment amount', 'error');
+            return;
+        }
+        if (payment > balance) {
+            showMessage(`Payment cannot exceed pending amount ${formatMoney(balance)}`, 'error');
+            return;
+        }
+
+        const beforeRow = row.slice();
+        const afterRow = row.slice(0, 14);
+        while (afterRow.length < 14) afterRow.push('');
+        const newReceived = received + payment;
+        const newRemaining = Math.max(dealing - newReceived, 0);
+        afterRow[8] = formatNotepadDate(new Date());
+        afterRow[10] = newReceived.toFixed(2);
+        afterRow[11] = newRemaining.toFixed(2);
+        afterRow[12] = newRemaining <= 0 ? 'PAID' : 'PARTIAL';
+
+        const keys = ['taskDate','contactNo','state','name','loginId','password','taskDescription','taskStatus','paymentDate','dealingAmount','receivedAmount','remainingAmount','paymentStatus','reminderDate'];
+        const payload = new URLSearchParams();
+        payload.append('action', 'updateNotepad');
+        payload.append('row', index);
+        afterRow.forEach((value, col) => {
+            const output = [0,8,13].includes(col) && value ? formatNotepadDate(value) : value;
+            payload.append(keys[col], output == null ? '' : output);
+        });
+
+        try {
+            showMessage('Adding payment transaction...', 'pending');
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: payload });
+            const result = await response.json();
+            if (!result.success) throw new Error(result.message || result.error || 'Payment update failed');
+            appendNotepadHistory(beforeRow, afterRow, `Payment Added (${formatMoney(payment)})`);
+            await loadNotepadData(true);
+            if (activeLedgerSource === 'notepad' && document.getElementById('contactLedgerModal')?.classList.contains('active')) {
+                renderNotepadContactLedger(activeLedgerKey, activeLedgerTitle);
+            }
+            showMessage(`Payment ${formatMoney(payment)} added successfully`, 'success');
+        } catch (error) {
+            showMessage(error.message || 'Unable to add payment', 'error');
+        }
     }
 
     function getNotepadCellHtml(value, col, rowIndex) {
