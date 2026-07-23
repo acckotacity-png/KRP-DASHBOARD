@@ -85,6 +85,15 @@
         .records-action-btn.add { background: #e6fcf5; color: #05cd99; }
         .records-note { font-size: 11px; color: #7b85a8; margin-top: 8px; line-height: 1.4; }
         .notepad-form { background: #fff; border: 0; border-radius: 0; padding: 0; margin-bottom: 0; }
+        #notepadTab .tracker-container { background: linear-gradient(145deg, #ffffff 0%, #f5f8fa 100%); border: 1px solid #e2e8f0; }
+        #notepadTab .section-title { color: #1b2559; }
+        #notepadTab .section-title i { color: #2b6cb0; filter: drop-shadow(0 3px 5px rgba(43,108,176,.16)); }
+        #notepadTab .toolbar { padding: 12px; border: 1px solid #e6eaf5; border-radius: 12px; background: rgba(255,255,255,.85); box-shadow: 0 6px 18px rgba(27,37,89,.05); }
+        #notepadTab .toolbar .btn-submit { background: #2b6cb0; }
+        #notepadTab .contact-ledger-link { color: #2b6cb0; }
+        #notepadTab .notepad-calendar-btn { color: #2b6cb0; }
+        #notepadModal .btn-submit { background: #2b6cb0; }
+        #notepadModal input:focus, #notepadModal select:focus, #notepadModal textarea:focus { border-color: #2b6cb0; box-shadow: 0 0 0 3px rgba(43,108,176,.1); }
         .notepad-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
         .notepad-actions .btn-submit { width: auto; margin-top: 0; }
         .notepad-search-wrap { position: relative; flex: 1 1 220px; min-width: 160px; }
@@ -97,8 +106,40 @@
         .notepad-calendar-btn:hover { background: #1b2559; color: #fff; border-color: #1b2559; }
         .notepad-calendar-btn:focus-visible { outline: 3px solid rgba(67,24,255,.18); outline-offset: 1px; }
         .notepad-native-date { position: absolute; width: 1px !important; height: 1px; opacity: 0; pointer-events: none; right: 0; bottom: 0; padding: 0 !important; border: 0 !important; }
-        #notepadTable { min-width: 1450px; }
-        #notepadTable td { white-space: normal; vertical-align: top; }
+        #notepadTable { min-width: 0; width: 100%; display: block; background: transparent; }
+        #notepadTable thead { display: none; }
+        #notepadTable tbody { display: block; width: 100%; }
+        #notepadTable tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; margin-bottom: 16px; padding: 14px; border: 1px solid #dfe5ec; border-radius: 16px; background: linear-gradient(#4f8a8b 0 4px, #fff 4px 100%); box-shadow: 0 8px 24px rgba(27,37,89,.07); transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+        #notepadTable tbody tr:hover { transform: translateY(-2px); border-color: #b9cdd3; box-shadow: 0 12px 30px rgba(43,108,176,.10); }
+        #notepadTable td { display: flex; flex-direction: column; gap: 5px; min-width: 0; padding: 10px 11px; white-space: normal; vertical-align: top; border: 1px solid #edf0f8; border-radius: 10px; background: #f9faff; color: #1b2559; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+        #notepadTable td::before { content: attr(data-label); color: #7b85a8; font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+        #notepadTable td:nth-child(1), #notepadTable td:nth-child(2) { background: #f1f7f8; border-color: #dcebec; }
+        #notepadTable td:nth-child(7) { grid-column: span 2; min-height: 86px; white-space: pre-wrap; background: linear-gradient(135deg, #f5f9f9, #f9fbfc); border-color: #dce7e8; }
+        #notepadTable td:nth-child(8), #notepadTable td:nth-child(13), #notepadTable td:nth-child(14) { align-items: flex-start; justify-content: center; }
+        #notepadTable td:last-child { background: transparent; border-style: dashed; }
+        #notepadTable td:last-child { justify-content: flex-end; }
+        #notepadTable th:nth-child(1), #notepadTable td:nth-child(1) { white-space: nowrap; min-width: 105px; }
+        #notepadTable th:nth-child(2), #notepadTable td:nth-child(2),
+        #notepadTable td:nth-child(2) .contact-ledger-link { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+        .notepad-status-badge { display: inline-flex; align-items: center; justify-content: center; padding: 5px 9px; border-radius: 999px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+        .notepad-status-pending { background: #fff5e6; color: #b45309; }
+        .notepad-status-progress { background: #e6f2ff; color: #1565c0; }
+        .notepad-status-completed { background: #e6fcf5; color: #008f68; }
+        .notepad-status-cancelled { background: #ffe6e6; color: #c62828; }
+        .notepad-payment-pending { background: #fff5e6; color: #b45309; }
+        .notepad-payment-partial { background: #e6f2ff; color: #1565c0; }
+        .notepad-payment-paid { background: #e6fcf5; color: #008f68; }
+        #notepadTable .records-action-btn { min-width: 72px; padding: 8px 12px; box-shadow: 0 3px 8px rgba(27,37,89,.08); transition: transform .18s ease, box-shadow .18s ease; }
+        #notepadTable .records-action-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 12px rgba(27,37,89,.14); }
+        #noteDescription { line-height: 1.7; background: #fbfcff; border-color: #dce2f2; }
+        #noteDescription:focus { background: #fff; border-color: #2b6cb0; box-shadow: 0 0 0 3px rgba(43,108,176,.1); }
+        @media (max-width: 900px) {
+            #notepadTable tbody tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 600px) {
+            #notepadTable tbody tr { grid-template-columns: 1fr; }
+            #notepadTable td:nth-child(7) { grid-column: span 1; }
+        }
         .reminder-badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 999px; font-size: 10px; font-weight: 800; white-space: nowrap; }
         .reminder-upcoming { background: #e6f2ff; color: #4318ff; }
         .reminder-today { background: #fff5e6; color: #b45309; }
@@ -623,7 +664,15 @@
                     <div class="form-group"><label>Name</label><input type="text" id="noteName"></div>
                     <div class="form-group"><label>ID</label><input type="text" id="noteLoginId"></div>
                     <div class="form-group"><label>Password</label><input type="text" id="notePassword" autocomplete="off"></div>
-                    <div class="form-group" style="grid-column:1/-1;"><label class="required">Task Description</label><textarea id="noteDescription" rows="3" required></textarea></div>
+                    <div class="form-group" style="grid-column:1/-1;">
+                        <label class="required">Task Description</label>
+                        <textarea id="noteDescription" rows="8" required>1. Login ID: 
+2. Pacs/Bank Name: 
+3. Branch: 
+4. Dist: 
+5. Operator No.: 
+6. State: </textarea>
+                    </div>
                     <div class="form-group"><label>Task Status</label><select id="noteTaskStatus"><option>PENDING</option><option>IN PROGRESS</option><option>COMPLETED</option><option>CANCELLED</option></select></div>
                     <div class="form-group"><label>Payment Date</label><div class="notepad-date-picker"><input type="text" id="notePaymentDate" placeholder="dd-mm-yyyy" readonly><button type="button" class="notepad-calendar-btn" onclick="openNotepadDatePicker('notePaymentDate','notePaymentDatePicker')"><i class="fas fa-calendar-days"></i></button><input type="date" class="notepad-native-date" id="notePaymentDatePicker" onchange="selectNotepadDate('notePaymentDate',this,'payment')"></div></div>
                     <div class="form-group"><label>Dealing Amount</label><input type="number" id="noteDealingAmount" min="0" step="0.01" value="0" oninput="calculateNotepadRemaining()"></div>
@@ -5695,6 +5744,16 @@
         if (col === 1 && value) {
             return `<button type="button" class="contact-ledger-link" onclick="openNotepadLedger(${rowIndex})" title="View full ledger">${escapeHtml(showSheetText(value))}</button>`;
         }
+        if (col === 7) {
+            const status = String(value || 'PENDING').toUpperCase();
+            const statusClass = status === 'COMPLETED' ? 'completed' : status === 'CANCELLED' ? 'cancelled' : status === 'IN PROGRESS' ? 'progress' : 'pending';
+            return `<span class="notepad-status-badge notepad-status-${statusClass}">${escapeHtml(status)}</span>`;
+        }
+        if (col === 12) {
+            const status = String(value || 'PENDING').toUpperCase();
+            const statusClass = status === 'PAID' ? 'paid' : status === 'PARTIAL' ? 'partial' : 'pending';
+            return `<span class="notepad-status-badge notepad-payment-${statusClass}">${escapeHtml(status)}</span>`;
+        }
         if ([9,10,11].includes(col)) return formatMoney(parseFloat(value) || 0);
         if ([0,8].includes(col)) return escapeHtml(formatNotepadDate(value) || '-');
         return escapeHtml(value || '-');
@@ -5827,12 +5886,13 @@
         const filtered = notepadRows.map((row, index) => ({ row, index })).filter(({ row }) => {
             const matchesSearch = !search || row.join(' ').toLowerCase().includes(search);
             return matchesSearch && (taskFilter === 'all' || String(row[7]).toUpperCase() === taskFilter) && (paymentFilter === 'all' || String(row[12]).toUpperCase() === paymentFilter);
-        });
-        if (!filtered.length) { body.innerHTML = '<tr><td colspan="15" style="text-align:center;padding:24px;">No tasks found</td></tr>'; return; }
+        }).sort((a, b) => b.index - a.index);
+        if (!filtered.length) { body.innerHTML = '<tr style="display:block;"><td style="text-align:center;padding:24px;">No tasks found</td></tr>'; return; }
+        const notepadLabels = ['Task Date','Contact No','State','Name','ID','Password','Task Description','Task Status','Payment Date','Dealing','Received','Remaining','Payment Status'];
         body.innerHTML = filtered.map(({ row, index }) => `<tr>
-            ${row.slice(0, 13).map((value, col) => `<td>${getNotepadCellHtml(value, col, index)}</td>`).join('')}
-            <td>${getNotepadReminderHtml(row)}</td>
-            <td><div class="records-row-actions"><button class="records-action-btn update" type="button" onclick="editNotepadEntry(${index})">Edit</button><button class="records-action-btn delete" type="button" onclick="deleteNotepadEntry(${index})">Delete</button></div></td>
+            ${row.slice(0, 13).map((value, col) => `<td data-label="${notepadLabels[col]}">${getNotepadCellHtml(value, col, index)}</td>`).join('')}
+            <td data-label="Reminder">${getNotepadReminderHtml(row)}</td>
+            <td data-label="Actions"><div class="records-row-actions"><button class="records-action-btn update" type="button" onclick="editNotepadEntry(${index})">Edit</button><button class="records-action-btn delete" type="button" onclick="deleteNotepadEntry(${index})">Delete</button></div></td>
         </tr>`).join('');
     }
 
