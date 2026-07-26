@@ -1,5 +1,5 @@
 export const firebaseConfig = {
-  apiKey: "AIzaSyBBRg3HEJwSUPKaF1U0-MWtnuSm_5aB-qA",
+  apiKey: "AIzaSyBBRg3HEJwSUPkaF1U0-MWtnuSm_5aB-qA",
   authDomain: "krp-dashboard.firebaseapp.com",
   projectId: "krp-dashboard",
   storageBucket: "krp-dashboard.firebasestorage.app",
