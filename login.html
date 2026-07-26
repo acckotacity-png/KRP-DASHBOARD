@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login · KRP Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="app-icon.svg">
+  <style>
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 20px; background: #f4f7fe; color: #1b2559; font-family: Inter, Arial, sans-serif; }
+    .login-card { width: min(100%, 410px); padding: 32px; background: #fff; border: 1px solid #e0e5f2; border-radius: 20px; box-shadow: 0 16px 45px rgba(27,37,89,.12); text-align: center; }
+    .logo { width: 76px; height: 76px; margin: 0 auto 18px; border-radius: 18px; }
+    h1 { margin: 0 0 8px; font-size: 25px; }
+    p { margin: 0 0 24px; color: #7b85a8; font-size: 14px; line-height: 1.5; }
+    button { width: 100%; min-height: 48px; border: 1px solid #d8deef; border-radius: 12px; background: #fff; color: #1b2559; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; }
+    button:hover { border-color: #4318ff; background: #f8f7ff; }
+    button:disabled { opacity: .65; cursor: wait; }
+    .google { width: 20px; height: 20px; font-weight: 900; color: #4285f4; }
+    #message { min-height: 20px; margin-top: 16px; color: #ee5d50; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main class="login-card">
+    <img class="logo" src="icon-192.png" alt="KRP logo">
+    <h1>KRP Dashboard</h1>
+    <p>Dashboard access करने के लिए अपने Google account से sign in करें।</p>
+    <button type="button" id="googleLogin"><span class="google">G</span> Continue with Google</button>
+    <div id="message" role="alert"></div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import {
+      getAuth, GoogleAuthProvider, browserLocalPersistence, setPersistence,
+      signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut
+    } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import { firebaseConfig, allowedEmails } from "./auth-config.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    const button = document.getElementById("googleLogin");
+    const message = document.getElementById("message");
+    const requestedNext = new URLSearchParams(location.search).get("next") || "index.html";
+    const nextPage = /^[a-zA-Z0-9._-]+\.html$/.test(requestedNext) ? requestedNext : "index.html";
+
+    function allowed(user) {
+      return !allowedEmails.length || allowedEmails.includes(String(user?.email || "").toLowerCase());
+    }
+
+    async function finish(user) {
+      if (!allowed(user)) {
+        await signOut(auth);
+        message.textContent = "इस Google account को dashboard access नहीं दिया गया है।";
+        button.disabled = false;
+        return;
+      }
+      location.replace(nextPage);
+    }
+
+    await setPersistence(auth, browserLocalPersistence);
+    getRedirectResult(auth).catch(error => { message.textContent = error.message; });
+    onAuthStateChanged(auth, user => { if (user) finish(user); });
+
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      message.textContent = "";
+      try {
+        const result = await signInWithPopup(auth, provider);
+        await finish(result.user);
+      } catch (error) {
+        if (error.code === "auth/popup-blocked" || error.code === "auth/operation-not-supported-in-this-environment") {
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+        message.textContent = error.message || "Google login failed.";
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

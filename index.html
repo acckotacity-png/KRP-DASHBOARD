@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <style id="auth-guard-style">html { visibility: hidden; }</style>
+    <script type="module" src="auth-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>KRP ID Activation - Dashboard</title>
@@ -779,6 +781,7 @@
         <div class="view-filter">
             <button class="btn-upi" onclick="openUpiModal()"><i class="fas fa-wallet"></i> Payment Settings</button>
             <button class="btn-settings" onclick="openSettingsModal()"><i class="fas fa-cog"></i> Settings</button>
+            <button class="btn-settings" onclick="logoutKrpDashboard()"><i class="fas fa-right-from-bracket"></i> Logout</button>
             <button class="btn-notepad" onclick="switchTab('notepad')"><i class="fas fa-note-sticky"></i> Notepad</button>
             <button class="btn-upi" onclick="switchTab('transaction')"><i class="fas fa-money-bill-transfer"></i> KRP Transaction</button>
             <div class="tracker-dashboard-only tracker-dashboard-controls">
