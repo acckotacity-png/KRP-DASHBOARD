@@ -34,7 +34,7 @@
       getAuth, GoogleAuthProvider, browserLocalPersistence, setPersistence,
       signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut
     } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-    import { firebaseConfig, allowedEmails } from "./auth-config.js";
+    import { firebaseConfig, allowedEmails } from "./auth-config.js?v=2";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
