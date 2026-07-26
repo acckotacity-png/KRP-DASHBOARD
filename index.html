@@ -184,11 +184,19 @@
         
         /* Tabs */
         .nav-tabs { display: flex; background: white; border-radius: 30px; padding: 5px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); }
+        .mobile-nav-toggle { display: none; width: 100%; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; padding: 10px 14px; border: 0; border-radius: 10px; background: #1b2559; color: #fff; font-weight: 700; cursor: pointer; }
         .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 25px; font-weight: 600; color: #a3aed1; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .tab-btn.active { background: #1b2559; color: white; }
         .tab-content { display: none; animation: fadeIn 0.4s; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 600px) {
+            .mobile-nav-toggle { display: flex; }
+            .nav-tabs { display: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; border-radius: 12px; padding: 8px; margin-bottom: 12px; }
+            .nav-tabs.mobile-open { display: grid; }
+            .nav-tabs .tab-btn { width: 100%; min-width: 0; }
+            .nav-tabs .tab-btn:last-child { grid-column: 1 / -1; }
+        }
         
         /* Tracker & Forms */
         .tracker-container { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.02); }
@@ -779,16 +787,21 @@
         </div>
     </div>
 
-    <div class="stats-grid tracker-dashboard-only" id="statsArea"></div>
-    <div class="stats-grid notepad-summary-only" id="notepadStatsArea"></div>
+    <button type="button" class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-controls="mainNavTabs" aria-expanded="false">
+        <span><i class="fas fa-bars"></i> Dashboard Menu</span>
+        <i class="fas fa-chevron-down" id="mobileNavChevron"></i>
+    </button>
 
-    <div class="nav-tabs">
+    <div class="nav-tabs" id="mainNavTabs">
         <button class="tab-btn active" data-tab="form" onclick="switchTab('form')"><i class="fas fa-pen"></i> Data Entry</button>
         <button class="tab-btn" data-tab="tracker" onclick="switchTab('tracker')"><i class="fas fa-list-ul"></i> Data Tracker</button>
         <button class="tab-btn" data-tab="dashboard" onclick="switchTab('dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</button>
         <button class="tab-btn" data-tab="notepad" onclick="switchTab('notepad')"><i class="fas fa-note-sticky"></i> Notepad</button>
         <button class="tab-btn" data-tab="transaction" onclick="switchTab('transaction')"><i class="fas fa-money-bill-transfer"></i> Transaction</button>
     </div>
+
+    <div class="stats-grid tracker-dashboard-only" id="statsArea"></div>
+    <div class="stats-grid notepad-summary-only" id="notepadStatsArea"></div>
 
     <div id="transactionTab" class="tab-content">
         <div class="transaction-frame-wrap">
@@ -2026,6 +2039,7 @@
 
     // ─── TABS ─────────────────────────────────────────────────────
     function switchTab(tab) {
+        closeMobileNav();
         document.body.classList.toggle('notepad-view', tab === 'notepad');
         document.body.classList.toggle('transaction-view', tab === 'transaction');
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -2065,6 +2079,24 @@
     }
 
     // ─── MONTH DROPDOWN ───────────────────────────────────────────
+    function toggleMobileNav() {
+        const nav = document.getElementById('mainNavTabs');
+        const button = document.querySelector('.mobile-nav-toggle');
+        const chevron = document.getElementById('mobileNavChevron');
+        const isOpen = nav.classList.toggle('mobile-open');
+        button.setAttribute('aria-expanded', String(isOpen));
+        chevron.className = isOpen ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+    }
+
+    function closeMobileNav() {
+        const nav = document.getElementById('mainNavTabs');
+        const button = document.querySelector('.mobile-nav-toggle');
+        const chevron = document.getElementById('mobileNavChevron');
+        if (nav) nav.classList.remove('mobile-open');
+        if (button) button.setAttribute('aria-expanded', 'false');
+        if (chevron) chevron.className = 'fas fa-chevron-down';
+    }
+
     function populateMonthsDropdown() {
         const select = document.getElementById('mainMonthFilter');
         const dashboardSelect = document.getElementById('dashboardMonthFilter');
