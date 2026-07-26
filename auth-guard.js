@@ -4,7 +4,7 @@ import {
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-import { firebaseConfig, allowedEmails } from "./auth-config.js?v=2";
+import { firebaseConfig, allowedEmails } from "./auth-config.js?v=3";
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const auth = getAuth(app);

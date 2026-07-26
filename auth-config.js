@@ -7,5 +7,7 @@ export const firebaseConfig = {
   appId: "1:141043056119:web:673e39ee208f89818002f2"
 };
 
-// Empty list allows every Google account. Add lowercase Gmail IDs to restrict access.
-export const allowedEmails = [];
+// Only the lowercase email IDs listed here can access the dashboard.
+export const allowedEmails = [
+  "acc.kotacity@myimaginestore.com"
+];
