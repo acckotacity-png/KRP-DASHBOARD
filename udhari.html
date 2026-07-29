@@ -194,6 +194,16 @@
   function setStatus(text, error=false) { const el=document.getElementById('statusMessage'); el.textContent=text; el.style.color=error?'#c62828':'#008f68'; }
   function cache() { localStorage.setItem(CACHE_KEY, JSON.stringify({savedAt:Date.now(),records})); }
   function restoreCache() { try { const c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null'); if(c?.records){records=c.records;render();return true;} } catch(e){} return false; }
+  function applyServerData(result, message='Updated') {
+    if(Array.isArray(result?.data)) {
+      records=result.data;
+      cache();
+      render();
+      setStatus(message);
+      return true;
+    }
+    return false;
+  }
 
   async function request(params) {
     if (!API_URL) throw new Error('Dashboard se Udhari tab open karein');
@@ -465,7 +475,7 @@
       const result=await request({action,data:JSON.stringify(data)});
       if(!result.success)throw new Error(result.error||'Save failed');
       closeForm();
-      await loadData(true);
+      if(!applyServerData(result,data.entryId?'Entry updated':'Entry saved')) await loadData(true);
       if(ledgerKey) openLedger(ledgerKey);
       returnToLedgerKey='';
     }
@@ -474,9 +484,23 @@
 
   async function deleteEntry(id) {
     if(!confirm('Is Udhari entry ko delete karein?'))return;
+    const previousRecords=records;
+    closeLedger();
+    records=records.filter(r=>String(r[COL.id])!==String(id));
+    cache();
+    render();
     setStatus('Deleting...');
-    try {const result=await request({action:'deleteUdhariRecord',entryId:id});if(!result.success)throw new Error(result.error||'Delete failed');await loadData(true);}
-    catch(error){setStatus(error.message,true);}
+    try {
+      const result=await request({action:'deleteUdhariRecord',entryId:id});
+      if(!result.success)throw new Error(result.error||'Delete failed');
+      if(!applyServerData(result,'Entry deleted')) await loadData(true);
+    }
+    catch(error){
+      records=previousRecords;
+      cache();
+      render();
+      setStatus(error.message,true);
+    }
   }
 
   document.getElementById('entryModal').addEventListener('click',e=>{if(e.target.id==='entryModal')closeForm();});
