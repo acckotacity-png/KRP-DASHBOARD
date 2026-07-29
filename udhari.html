@@ -92,6 +92,7 @@
     <div class="card"><span>Total Udhari</span><strong id="totalUdhari">₹0</strong></div>
     <div class="card"><span>Payment Mila</span><strong id="totalPayment">₹0</strong></div>
     <div class="card"><span>Current Balance</span><strong id="totalBalance">₹0</strong></div>
+    <div class="card"><span>Remaining Interest</span><strong id="totalInterest">₹0</strong></div>
     <div class="card"><span>Total Payable</span><strong id="totalPayable">₹0</strong></div>
   </section>
 
@@ -232,6 +233,7 @@
         <div class="customer-info">
           <div><span>Total Udhari</span><b>${money(totalUdhari)}</b></div>
           <div><span>Payment Mila</span><b>${money(totalPayment)}</b></div>
+          <div><span>Remaining Interest</span><b>${money(r[COL.interest])}</b></div>
           <div><span>Total Payable</span><b>${money(r[COL.total])}</b></div>
           <div><span>Last Entry</span><b>${escapeHtml(r[COL.date])}</b></div>
         </div>
@@ -255,6 +257,7 @@
     document.getElementById('totalUdhari').textContent=money(records.reduce((s,r)=>s+num(r[COL.udhar]),0));
     document.getElementById('totalPayment').textContent=money(records.reduce((s,r)=>s+num(r[COL.payment]),0));
     document.getElementById('totalBalance').textContent=money(current.reduce((s,r)=>s+num(r[COL.balance]),0));
+    document.getElementById('totalInterest').textContent=money(current.reduce((s,r)=>s+num(r[COL.interest]),0));
     document.getElementById('totalPayable').textContent=money(current.reduce((s,r)=>s+num(r[COL.total]),0));
   }
 
@@ -384,6 +387,7 @@
       <div class="card"><span>Total Udhari</span><strong>${money(totalUdhari)}</strong></div>
       <div class="card"><span>Payment Mila</span><strong>${money(totalPayment)}</strong></div>
       <div class="card"><span>Balance</span><strong>${money(latest[COL.balance])}</strong></div>
+      <div class="card"><span>Remaining Interest</span><strong>${money(latest[COL.interest])}</strong></div>
       <div class="card"><span>Total Payable</span><strong>${money(latest[COL.total])}</strong></div>
       <button class="primary" onclick="addCustomerUdhari('${escapeHtml(customer.key)}')"><i class="fas fa-plus"></i> Add Udhari</button>
       <button class="success" onclick="addCustomerPayment('${escapeHtml(customer.key)}')"><i class="fas fa-indian-rupee-sign"></i> Add Payment</button>
