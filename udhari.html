@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Udhari Bahi Khata</title>
+  <style id="auth-guard-style">html { visibility: hidden; }</style>
+  <script type="module" src="auth-guard.js?v=4"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 12px; background: #f4f7fe; color: #2b3674; font-family: Inter, Arial, sans-serif; }
+    .app { max-width: 1400px; margin: auto; }
+    .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 15px; margin-bottom: 14px; background: #fff; border: 1px solid #e0e5f2; border-radius: 14px; }
+    .top h1 { margin: 0; color: #1b2559; font-size: 20px; }
+    .top h1 i { color: #2b6cb0; margin-right: 8px; }
+    button { border: 0; border-radius: 9px; padding: 9px 13px; font-weight: 700; cursor: pointer; }
+    .primary { background: #4318ff; color: #fff; }
+    .success { background: #05cd99; color: #fff; }
+    .outline { background: #fff; color: #1b2559; border: 1px solid #d8deef; }
+    .danger { background: #ffe6e6; color: #c62828; }
+    .cards { display: grid; grid-template-columns: repeat(5, minmax(130px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .card { padding: 13px; background: #fff; border: 1px solid #e0e5f2; border-radius: 12px; }
+    .card span { display: block; margin-bottom: 6px; color: #a3aed1; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+    .card strong { color: #1b2559; font-size: 18px; }
+    .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 12px; background: #fff; border: 1px solid #e0e5f2; border-radius: 12px 12px 0 0; }
+    .search { position: relative; flex: 1 1 260px; }
+    .search input { width: 100%; padding: 10px 36px; border: 1px solid #d8deef; border-radius: 9px; outline: none; }
+    .search > i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #a3aed1; }
+    .clear { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; padding: 0; border-radius: 50%; background: #ffe6e6; color: #ee5d50; display: none; }
+    .status { font-size: 12px; color: #008f68; }
+    .table-wrap { overflow: auto; background: #fff; border: 1px solid #e0e5f2; border-top: 0; border-radius: 0 0 12px 12px; }
+    table { width: 100%; min-width: 1900px; border-collapse: collapse; font-size: 12px; }
+    th { position: sticky; top: 0; z-index: 1; padding: 10px 8px; background: #f4f7fe; color: #7b85a8; text-align: left; white-space: nowrap; }
+    td { padding: 9px 8px; border-top: 1px solid #edf0f8; color: #2b3674; white-space: nowrap; }
+    tr:hover td { background: #fafbff; }
+    .badge { display: inline-flex; padding: 4px 8px; border-radius: 999px; font-size: 10px; font-weight: 800; }
+    .pending { background: #fff5e6; color: #b45309; }
+    .partial { background: #e6f2ff; color: #1565c0; }
+    .paid { background: #e6fcf5; color: #008f68; }
+    .overdue { background: #ffe6e6; color: #c62828; }
+    .actions { display: flex; gap: 5px; }
+    .actions button { padding: 6px 8px; }
+    .more { display: none; justify-content: center; padding: 12px; }
+    .modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 14px; background: rgba(27,37,89,.45); }
+    .modal.open { display: flex; }
+    .dialog { width: min(950px, 100%); max-height: 94vh; overflow: auto; padding: 18px; background: #fff; border-radius: 15px; }
+    .dialog-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .dialog-head h2 { margin: 0; font-size: 17px; color: #1b2559; }
+    .close { width: 30px; height: 30px; padding: 0; border-radius: 50%; background: #ffe6e6; color: #ee5d50; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field.wide { grid-column: span 2; }
+    label { color: #7b85a8; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+    input, select, textarea { width: 100%; padding: 9px; border: 1px solid #d8deef; border-radius: 8px; outline: none; font: inherit; }
+    textarea { min-height: 70px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { border-color: #4318ff; box-shadow: 0 0 0 2px rgba(67,24,255,.1); }
+    .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+    @media (max-width: 800px) { .cards { grid-template-columns: repeat(2, 1fr); } .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) { body { padding: 7px; } .cards { grid-template-columns: repeat(2, 1fr); } .grid { grid-template-columns: 1fr; } .field.wide { grid-column: span 1; } }
+  </style>
+</head>
+<body>
+<main class="app">
+  <div class="top">
+    <h1><i class="fas fa-book-open"></i>Udhari Bahi Khata</h1>
+    <div>
+      <button class="outline" onclick="loadData(true)"><i class="fas fa-rotate"></i> Refresh</button>
+      <button class="primary" onclick="openForm()"><i class="fas fa-plus"></i> New Entry</button>
+    </div>
+  </div>
+
+  <section class="cards">
+    <div class="card"><span>Customers</span><strong id="customerCount">0</strong></div>
+    <div class="card"><span>Total Udhari</span><strong id="totalUdhari">₹0</strong></div>
+    <div class="card"><span>Payment Mila</span><strong id="totalPayment">₹0</strong></div>
+    <div class="card"><span>Current Balance</span><strong id="totalBalance">₹0</strong></div>
+    <div class="card"><span>Total Payable</span><strong id="totalPayable">₹0</strong></div>
+  </section>
+
+  <div class="tools">
+    <div class="search">
+      <i class="fas fa-search"></i>
+      <input id="searchInput" placeholder="Name, mobile, status, date or remarks..." oninput="handleSearch(this.value)">
+      <button id="clearSearch" class="clear" onclick="clearSearch()" title="Clear"><i class="fas fa-times"></i></button>
+    </div>
+    <span id="recordCount">0 records</span>
+    <span id="statusMessage" class="status">Ready</span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Date</th><th>Customer</th><th>Mobile</th><th>Type</th><th>Description</th>
+        <th>Udhari</th><th>Payment</th><th>Balance</th><th>Interest</th><th>Total Payable</th>
+        <th>Rate</th><th>Due Date</th><th>Status</th><th>Reminder</th><th>Payment Mode</th>
+        <th>Reference</th><th>Remarks</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <div id="moreWrap" class="more"><button id="moreButton" class="outline" onclick="toggleMore()">Show 10 More</button></div>
+</main>
+
+<div class="modal" id="entryModal">
+  <div class="dialog">
+    <div class="dialog-head"><h2 id="formTitle">Add Udhari Entry</h2><button class="close" onclick="closeForm()">&times;</button></div>
+    <form id="entryForm" onsubmit="saveEntry(event)">
+      <input type="hidden" id="entryId">
+      <div class="grid">
+        <div class="field"><label>Date *</label><input type="date" id="date" required></div>
+        <div class="field"><label>Customer Name *</label><input id="customerName" required></div>
+        <div class="field"><label>Mobile No. *</label><input id="mobileNo" inputmode="numeric" required></div>
+        <div class="field"><label>Address / State</label><input id="address"></div>
+        <div class="field"><label>Transaction Type</label><select id="transactionType" onchange="applyType()"><option>UDHAR DIYA</option><option>PAYMENT MILA</option></select></div>
+        <div class="field"><label>Description</label><input id="description"></div>
+        <div class="field"><label>Udhari Diya Amount</label><input type="number" step="0.01" id="udharAmount"></div>
+        <div class="field"><label>Payment Mila Amount</label><input type="number" step="0.01" id="paymentAmount"></div>
+        <div class="field"><label>Due Date</label><input type="date" id="dueDate"></div>
+        <div class="field"><label>Payment Mode</label><select id="paymentMode"><option value="">Select</option><option>CASH</option><option>UPI</option><option>BANK</option><option>OTHER</option></select></div>
+        <div class="field"><label>UTR / Reference No.</label><input id="referenceNo"></div>
+        <div class="field"><label>Reminder Date</label><input type="date" id="reminderDate"></div>
+        <div class="field"><label>Interest Rate (%)</label><input type="number" step="0.01" id="interestRate" value="0"></div>
+        <div class="field"><label>Interest Type</label><select id="interestType"><option>MONTHLY</option><option>YEARLY</option></select></div>
+        <div class="field"><label>Interest Start Date</label><input type="date" id="interestStartDate"></div>
+        <div class="field wide"><label>Remarks</label><textarea id="remarks"></textarea></div>
+      </div>
+      <div class="form-actions"><button type="button" class="outline" onclick="closeForm()">Cancel</button><button id="saveButton" class="success" type="submit">Save Entry</button></div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const API_URL = new URLSearchParams(location.search).get('api') || '';
+  const CACHE_KEY = 'krp_udhari_cache_v1';
+  const COL = { id:0,date:1,name:2,mobile:3,address:4,type:5,description:6,udhar:7,payment:8,balance:9,due:10,mode:11,ref:12,status:13,reminder:14,remarks:15,createdBy:16,timestamp:17,rate:18,interestType:19,interestStart:20,interestTill:21,interest:22,total:23 };
+  let records = [];
+  let query = '';
+  let visible = 10;
+  let filteredCount = 0;
+
+  const money = value => '₹' + (Number(String(value || 0).replace(/,/g,'')) || 0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const num = value => Number(String(value || 0).replace(/,/g,'')) || 0;
+  const escapeHtml = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const isoToDisplay = value => { const m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?`${m[3]}-${m[2]}-${m[1]}`:value||''; };
+  const displayToIso = value => { const m=String(value||'').match(/^(\d{2})-(\d{2})-(\d{4})$/); return m?`${m[3]}-${m[2]}-${m[1]}`:value||''; };
+  const dateTime = value => { const iso=displayToIso(value); const t=new Date(iso+'T00:00:00').getTime(); return Number.isFinite(t)?t:0; };
+
+  function setStatus(text, error=false) { const el=document.getElementById('statusMessage'); el.textContent=text; el.style.color=error?'#c62828':'#008f68'; }
+  function cache() { localStorage.setItem(CACHE_KEY, JSON.stringify({savedAt:Date.now(),records})); }
+  function restoreCache() { try { const c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null'); if(c?.records){records=c.records;render();return true;} } catch(e){} return false; }
+
+  async function request(params) {
+    if (!API_URL) throw new Error('Dashboard se Udhari tab open karein');
+    const qs = new URLSearchParams({...params,t:Date.now()});
+    const response = await fetch(API_URL+'?'+qs.toString(),{cache:'no-store'});
+    if (!response.ok) throw new Error('HTTP '+response.status);
+    return response.json();
+  }
+
+  async function loadData(force=false) {
+    if (!force) { try { const c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null'); if(c && Date.now()-c.savedAt<120000){records=c.records;render();setStatus('Ready · Cached JSON');return;} } catch(e){} }
+    setStatus('Loading...');
+    try {
+      const result=await request({action:'getUdhariData'});
+      if(!result.success) throw new Error(result.error||'Load failed');
+      records=result.data||[]; cache(); render(); setStatus('Updated');
+    } catch(error) { setStatus(error.message,true); }
+  }
+
+  function render() {
+    const sorted=[...records].sort((a,b)=>dateTime(b[COL.date])-dateTime(a[COL.date]));
+    const q=query.trim().toLowerCase();
+    const filtered=q?sorted.filter(r=>r.some(v=>String(v||'').toLowerCase().includes(q))):sorted;
+    filteredCount=filtered.length;
+    const shown=filtered.slice(0,visible);
+    document.getElementById('rows').innerHTML=shown.length?shown.map(r=>`
+      <tr>
+        <td>${escapeHtml(r[COL.date])}</td><td><b>${escapeHtml(r[COL.name])}</b></td><td>${escapeHtml(r[COL.mobile])}</td>
+        <td>${escapeHtml(r[COL.type])}</td><td>${escapeHtml(r[COL.description])}</td><td>${money(r[COL.udhar])}</td>
+        <td>${money(r[COL.payment])}</td><td><b>${money(r[COL.balance])}</b></td><td>${money(r[COL.interest])}</td>
+        <td><b>${money(r[COL.total])}</b></td><td>${escapeHtml(r[COL.rate])}% ${escapeHtml(r[COL.interestType])}</td>
+        <td>${escapeHtml(r[COL.due])}</td><td><span class="badge ${String(r[COL.status]).toLowerCase()}">${escapeHtml(r[COL.status])}</span></td>
+        <td>${escapeHtml(r[COL.reminder])}</td><td>${escapeHtml(r[COL.mode])}</td><td>${escapeHtml(r[COL.ref])}</td>
+        <td>${escapeHtml(r[COL.remarks])}</td><td><div class="actions"><button class="outline" onclick="editEntry('${escapeHtml(r[COL.id])}')"><i class="fas fa-pen"></i></button><button class="danger" onclick="deleteEntry('${escapeHtml(r[COL.id])}')"><i class="fas fa-trash"></i></button></div></td>
+      </tr>`).join(''):`<tr><td colspan="18" style="text-align:center;padding:28px">No records found</td></tr>`;
+    document.getElementById('recordCount').textContent=`${shown.length} / ${filtered.length} records`;
+    const more=document.getElementById('moreWrap'); more.style.display=filtered.length>10?'flex':'none';
+    document.getElementById('moreButton').textContent=shown.length>=filtered.length?'Show Less':'Show 10 More';
+    renderStats();
+  }
+
+  function renderStats() {
+    const latest={};
+    records.slice().sort((a,b)=>dateTime(a[COL.date])-dateTime(b[COL.date])).forEach(r=>latest[String(r[COL.mobile]||r[COL.name]).toLowerCase()]=r);
+    const current=Object.values(latest);
+    document.getElementById('customerCount').textContent=Object.keys(latest).length;
+    document.getElementById('totalUdhari').textContent=money(records.reduce((s,r)=>s+num(r[COL.udhar]),0));
+    document.getElementById('totalPayment').textContent=money(records.reduce((s,r)=>s+num(r[COL.payment]),0));
+    document.getElementById('totalBalance').textContent=money(current.reduce((s,r)=>s+num(r[COL.balance]),0));
+    document.getElementById('totalPayable').textContent=money(current.reduce((s,r)=>s+num(r[COL.total]),0));
+  }
+
+  function handleSearch(value) { query=value;visible=10;document.getElementById('clearSearch').style.display=value?'block':'none';render(); }
+  function clearSearch() { const el=document.getElementById('searchInput');el.value='';query='';visible=10;document.getElementById('clearSearch').style.display='none';render();el.focus(); }
+  function toggleMore() { visible=visible>=filteredCount?10:visible+10;render(); }
+  function applyType() { const type=document.getElementById('transactionType').value; if(type==='UDHAR DIYA')document.getElementById('paymentAmount').value=''; else document.getElementById('udharAmount').value=''; }
+
+  function openForm(record=null) {
+    document.getElementById('entryForm').reset();
+    document.getElementById('entryId').value='';
+    document.getElementById('date').value=new Date().toISOString().slice(0,10);
+    document.getElementById('interestStartDate').value=document.getElementById('date').value;
+    document.getElementById('interestRate').value='0';
+    document.getElementById('formTitle').textContent=record?'Edit Udhari Entry':'Add Udhari Entry';
+    if(record) {
+      document.getElementById('entryId').value=record[COL.id]; document.getElementById('date').value=displayToIso(record[COL.date]);
+      document.getElementById('customerName').value=record[COL.name]; document.getElementById('mobileNo').value=record[COL.mobile];
+      document.getElementById('address').value=record[COL.address]; document.getElementById('transactionType').value=record[COL.type];
+      document.getElementById('description').value=record[COL.description]; document.getElementById('udharAmount').value=record[COL.udhar];
+      document.getElementById('paymentAmount').value=record[COL.payment]; document.getElementById('dueDate').value=displayToIso(record[COL.due]);
+      document.getElementById('paymentMode').value=record[COL.mode]; document.getElementById('referenceNo').value=record[COL.ref];
+      document.getElementById('reminderDate').value=displayToIso(record[COL.reminder]); document.getElementById('remarks').value=record[COL.remarks];
+      document.getElementById('interestRate').value=record[COL.rate]; document.getElementById('interestType').value=record[COL.interestType]||'MONTHLY';
+      document.getElementById('interestStartDate').value=displayToIso(record[COL.interestStart]);
+    }
+    document.getElementById('entryModal').classList.add('open');
+  }
+  function closeForm(){document.getElementById('entryModal').classList.remove('open');}
+  function editEntry(id){const r=records.find(x=>String(x[COL.id])===String(id));if(r)openForm(r);}
+
+  async function saveEntry(event) {
+    event.preventDefault();
+    const data={entryId:document.getElementById('entryId').value,date:isoToDisplay(document.getElementById('date').value),customerName:document.getElementById('customerName').value.trim(),mobileNo:document.getElementById('mobileNo').value.trim(),address:document.getElementById('address').value.trim(),transactionType:document.getElementById('transactionType').value,description:document.getElementById('description').value.trim(),udharAmount:num(document.getElementById('udharAmount').value),paymentAmount:num(document.getElementById('paymentAmount').value),dueDate:isoToDisplay(document.getElementById('dueDate').value),paymentMode:document.getElementById('paymentMode').value,referenceNo:document.getElementById('referenceNo').value.trim(),reminderDate:isoToDisplay(document.getElementById('reminderDate').value),remarks:document.getElementById('remarks').value.trim(),interestRate:num(document.getElementById('interestRate').value),interestType:document.getElementById('interestType').value,interestStartDate:isoToDisplay(document.getElementById('interestStartDate').value),createdBy:window.parent.currentKrpUser?.email||''};
+    if(data.transactionType==='UDHAR DIYA'&&data.udharAmount<=0)return alert('Udhari amount enter karein');
+    if(data.transactionType==='PAYMENT MILA'&&data.paymentAmount<=0)return alert('Payment amount enter karein');
+    const button=document.getElementById('saveButton');button.disabled=true;setStatus('Saving...');
+    try { const action=data.entryId?'updateUdhariRecord':'saveUdhariRecord';const result=await request({action,data:JSON.stringify(data)});if(!result.success)throw new Error(result.error||'Save failed');closeForm();await loadData(true); }
+    catch(error){setStatus(error.message,true);} finally{button.disabled=false;}
+  }
+
+  async function deleteEntry(id) {
+    if(!confirm('Is Udhari entry ko delete karein?'))return;
+    setStatus('Deleting...');
+    try {const result=await request({action:'deleteUdhariRecord',entryId:id});if(!result.success)throw new Error(result.error||'Delete failed');await loadData(true);}
+    catch(error){setStatus(error.message,true);}
+  }
+
+  document.getElementById('entryModal').addEventListener('click',e=>{if(e.target.id==='entryModal')closeForm();});
+  restoreCache(); loadData(false);
+</script>
+</body>
+</html>

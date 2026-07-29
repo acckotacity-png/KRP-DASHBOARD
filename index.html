@@ -781,6 +781,7 @@
         <div class="view-filter">
             <button class="btn-upi" onclick="openUpiModal()"><i class="fas fa-wallet"></i> Payment Settings</button>
             <button class="btn-settings" onclick="openSettingsModal()"><i class="fas fa-cog"></i> Settings</button>
+            <button class="btn-notepad" onclick="switchTab('udhari')"><i class="fas fa-book-open"></i> Udhari Khata</button>
             <button class="btn-notepad" onclick="switchTab('notepad')"><i class="fas fa-note-sticky"></i> Notepad</button>
             <button class="btn-upi" onclick="switchTab('transaction')"><i class="fas fa-money-bill-transfer"></i> KRP Transaction</button>
             <button class="btn-settings" onclick="logoutKrpDashboard()"><i class="fas fa-right-from-bracket"></i> Logout</button>
@@ -799,12 +800,19 @@
         <button class="tab-btn active" data-tab="form" onclick="switchTab('form')"><i class="fas fa-pen"></i> Data Entry</button>
         <button class="tab-btn" data-tab="tracker" onclick="switchTab('tracker')"><i class="fas fa-list-ul"></i> Data Tracker</button>
         <button class="tab-btn" data-tab="dashboard" onclick="switchTab('dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</button>
+        <button class="tab-btn" data-tab="udhari" onclick="switchTab('udhari')"><i class="fas fa-book-open"></i> Udhari Khata</button>
         <button class="tab-btn" data-tab="notepad" onclick="switchTab('notepad')"><i class="fas fa-note-sticky"></i> Notepad</button>
         <button class="tab-btn" data-tab="transaction" onclick="switchTab('transaction')"><i class="fas fa-money-bill-transfer"></i> Transaction</button>
     </div>
 
     <div class="stats-grid tracker-dashboard-only" id="statsArea"></div>
     <div class="stats-grid notepad-summary-only" id="notepadStatsArea"></div>
+
+    <div id="udhariTab" class="tab-content">
+        <div class="transaction-frame-wrap">
+            <iframe id="udhariFrame" class="transaction-frame" title="Udhari Bahi Khata"></iframe>
+        </div>
+    </div>
 
     <div id="transactionTab" class="tab-content">
         <div class="transaction-frame-wrap">
@@ -2044,7 +2052,7 @@
     function switchTab(tab) {
         closeMobileNav();
         document.body.classList.toggle('notepad-view', tab === 'notepad');
-        document.body.classList.toggle('transaction-view', tab === 'transaction');
+        document.body.classList.toggle('transaction-view', tab === 'transaction' || tab === 'udhari');
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         if (tab === 'form') {
@@ -2065,6 +2073,14 @@
             document.getElementById('notepadTab').classList.add('active');
             document.querySelector('[data-tab="notepad"]').classList.add('active');
             loadNotepadData(false);
+        } else if (tab === 'udhari') {
+            document.body.classList.remove('form-view');
+            document.getElementById('udhariTab').classList.add('active');
+            document.querySelector('[data-tab="udhari"]').classList.add('active');
+            const udhariFrame = document.getElementById('udhariFrame');
+            if (udhariFrame && !udhariFrame.getAttribute('src')) {
+                udhariFrame.src = `udhari.html?api=${encodeURIComponent(APPS_SCRIPT_URL)}`;
+            }
         } else if (tab === 'transaction') {
             document.body.classList.remove('form-view');
             document.getElementById('transactionTab').classList.add('active');
