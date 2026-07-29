@@ -161,6 +161,8 @@
   let query = '';
   let visible = 10;
   let filteredCount = 0;
+  let activeLedgerKey = '';
+  let returnToLedgerKey = '';
 
   const money = value => '₹' + (Number(String(value || 0).replace(/,/g,'')) || 0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   const num = value => Number(String(value || 0).replace(/,/g,'')) || 0;
@@ -271,14 +273,17 @@
       document.getElementById('customerName').value=customer.name||'';
       document.getElementById('address').value=customer.address||'';
       note.textContent=`Existing customer मिला: ${customer.name} · Balance ${money(customer.latest[COL.balance])}`;
+      note.style.color='#008f68';
     } else {
       note.textContent=mobile.length>=10?'New customer mobile number':'';
+      note.style.color='#b45309';
     }
   }
 
   function addCustomerPayment(key) {
     const customer=findCustomer(key);
     if(!customer)return;
+    returnToLedgerKey=document.getElementById('ledgerModal').classList.contains('open')?customer.key:'';
     openForm();
     const latest=customer.latest;
     document.getElementById('customerName').value=customer.name||'';
@@ -297,6 +302,7 @@
   function openLedger(key) {
     const customer=findCustomer(key);
     if(!customer)return;
+    activeLedgerKey=customer.key;
     const entries=[...customer.entries].sort((a,b)=>dateTime(b[COL.date])-dateTime(a[COL.date]));
     const latest=customer.latest;
     const totalUdhari=entries.reduce((s,r)=>s+num(r[COL.udhar]),0);
@@ -306,7 +312,8 @@
       <div class="card"><span>Total Udhari</span><strong>${money(totalUdhari)}</strong></div>
       <div class="card"><span>Payment Mila</span><strong>${money(totalPayment)}</strong></div>
       <div class="card"><span>Balance</span><strong>${money(latest[COL.balance])}</strong></div>
-      <div class="card"><span>Total Payable</span><strong>${money(latest[COL.total])}</strong></div>`;
+      <div class="card"><span>Total Payable</span><strong>${money(latest[COL.total])}</strong></div>
+      <button class="success" onclick="addCustomerPayment('${escapeHtml(customer.key)}')"><i class="fas fa-indian-rupee-sign"></i> Add Payment</button>`;
     document.getElementById('ledgerRows').innerHTML=entries.map(r=>`<tr>
       <td>${escapeHtml(r[COL.date])}</td><td>${escapeHtml(r[COL.type])}</td><td>${escapeHtml(r[COL.description])}</td>
       <td>${money(r[COL.udhar])}</td><td>${money(r[COL.payment])}</td><td><b>${money(r[COL.balance])}</b></td>
@@ -317,7 +324,7 @@
     </tr>`).join('');
     document.getElementById('ledgerModal').classList.add('open');
   }
-  function closeLedger(){document.getElementById('ledgerModal').classList.remove('open');}
+  function closeLedger(){document.getElementById('ledgerModal').classList.remove('open');activeLedgerKey='';returnToLedgerKey='';}
 
   function openForm(record=null) {
     document.getElementById('entryForm').reset();
@@ -350,7 +357,16 @@
     if(data.transactionType==='UDHAR DIYA'&&data.udharAmount<=0)return alert('Udhari amount enter karein');
     if(data.transactionType==='PAYMENT MILA'&&data.paymentAmount<=0)return alert('Payment amount enter karein');
     const button=document.getElementById('saveButton');button.disabled=true;setStatus('Saving...');
-    try { const action=data.entryId?'updateUdhariRecord':'saveUdhariRecord';const result=await request({action,data:JSON.stringify(data)});if(!result.success)throw new Error(result.error||'Save failed');closeForm();await loadData(true); }
+    try {
+      const action=data.entryId?'updateUdhariRecord':'saveUdhariRecord';
+      const ledgerKey=returnToLedgerKey||activeLedgerKey;
+      const result=await request({action,data:JSON.stringify(data)});
+      if(!result.success)throw new Error(result.error||'Save failed');
+      closeForm();
+      await loadData(true);
+      if(ledgerKey) openLedger(ledgerKey);
+      returnToLedgerKey='';
+    }
     catch(error){setStatus(error.message,true);} finally{button.disabled=false;}
   }
 
