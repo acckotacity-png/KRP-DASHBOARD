@@ -214,13 +214,30 @@
   }
 
   async function loadData(force=false) {
-    if (!force) { try { const c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null'); if(c && Date.now()-c.savedAt<120000){records=c.records;render();setStatus('Ready · Cached JSON');return;} } catch(e){} }
-    setStatus('Loading...');
+    let showingCache=false;
+    if(!force) {
+      try {
+        const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
+        if(Array.isArray(cached?.records)) {
+          records=cached.records;
+          render();
+          showingCache=true;
+          setStatus('Ready · Cached JSON');
+        }
+      } catch(e){}
+    }
+    if(!showingCache)setStatus(force?'Syncing...':'Ready');
     try {
       const result=await request({action:'getUdhariData'});
       if(!result.success) throw new Error(result.error||'Load failed');
-      records=result.data||[]; cache(); render(); setStatus('Updated');
-    } catch(error) { setStatus(error.message,true); }
+      records=result.data||[];
+      cache();
+      render();
+      setStatus(showingCache?'Background sync complete':'Updated');
+    } catch(error) {
+      if(showingCache)setStatus('Cached data · Background sync pending',true);
+      else setStatus(error.message,true);
+    }
   }
 
   const normalizeMobile = value => String(value||'').replace(/\D/g,'').replace(/^91(?=\d{10}$)/,'');
@@ -505,7 +522,8 @@
 
   document.getElementById('entryModal').addEventListener('click',e=>{if(e.target.id==='entryModal')closeForm();});
   document.getElementById('ledgerModal').addEventListener('click',e=>{if(e.target.id==='ledgerModal')closeLedger();});
-  restoreCache(); loadData(false);
+  loadData(false);
+  setInterval(()=>loadData(false),120000);
 </script>
 </body>
 </html>
