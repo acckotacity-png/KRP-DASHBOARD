@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Udhari Bahi Khata</title>
   <style id="auth-guard-style">html { visibility: hidden; }</style>
-  <script type="module" src="auth-guard.js?v=4"></script>
+  <script type="module" src="auth-guard.js?v=5"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     * { box-sizing: border-box; }
@@ -532,8 +532,10 @@
 
   document.getElementById('entryModal').addEventListener('click',e=>{if(e.target.id==='entryModal')closeForm();});
   document.getElementById('ledgerModal').addEventListener('click',e=>{if(e.target.id==='ledgerModal')closeLedger();});
-  loadData(false);
-  setInterval(()=>loadData(false),120000);
+  window.addEventListener('load',()=>{
+    loadData(false);
+    setInterval(()=>loadData(false),120000);
+  });
 </script>
 </body>
 </html>
