@@ -74,7 +74,24 @@
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
     @media (max-width: 1000px) { .customer-grid { grid-template-columns: repeat(2, minmax(260px, 1fr)); } }
     @media (max-width: 800px) { .cards { grid-template-columns: repeat(2, 1fr); } .grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 600px) { body { padding: 7px; } .cards, .customer-grid { grid-template-columns: 1fr; } .grid { grid-template-columns: 1fr; } .field.wide { grid-column: span 1; } .customer-actions { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) {
+      body { padding: 7px; }
+      .top { align-items: stretch; padding: 12px; }
+      .top > div { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+      .cards, .customer-grid { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+      .field.wide { grid-column: span 1; }
+      .customer-actions { grid-template-columns: 1fr 1fr; }
+      .dialog { padding: 12px; max-height: 97vh; }
+      .ledger-dialog .table-wrap { overflow: visible; border: 0; background: transparent; }
+      .ledger-dialog table, .ledger-dialog tbody { display: block; min-width: 0; width: 100%; }
+      .ledger-dialog thead { display: none; }
+      .ledger-dialog tr { display: block; margin-bottom: 10px; padding: 9px 11px; background: #fff; border: 1px solid #e0e5f2; border-radius: 11px; }
+      .ledger-dialog td { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; white-space: normal; text-align: right; border-top: 1px solid #edf0f8; }
+      .ledger-dialog td:first-child { border-top: 0; }
+      .ledger-dialog td::before { content: attr(data-label); color: #7b85a8; font-size: 10px; font-weight: 800; text-align: left; text-transform: uppercase; }
+      .ledger-dialog td .actions { justify-content: flex-end; }
+    }
   </style>
 </head>
 <body>
@@ -172,6 +189,7 @@
   const isoToDisplay = value => { const m=String(value||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?`${m[3]}-${m[2]}-${m[1]}`:value||''; };
   const displayToIso = value => { const m=String(value||'').match(/^(\d{2})-(\d{2})-(\d{4})$/); return m?`${m[3]}-${m[2]}-${m[1]}`:value||''; };
   const dateTime = value => { const iso=displayToIso(value); const t=new Date(iso+'T00:00:00').getTime(); return Number.isFinite(t)?t:0; };
+  const localTodayIso = () => { const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 
   function setStatus(text, error=false) { const el=document.getElementById('statusMessage'); el.textContent=text; el.style.color=error?'#c62828':'#008f68'; }
   function cache() { localStorage.setItem(CACHE_KEY, JSON.stringify({savedAt:Date.now(),records})); }
@@ -393,12 +411,12 @@
       <button class="success" onclick="addCustomerPayment('${escapeHtml(customer.key)}')"><i class="fas fa-indian-rupee-sign"></i> Add Payment</button>
       <button class="whatsapp" onclick="shareWhatsApp('${escapeHtml(customer.key)}')"><i class="fab fa-whatsapp"></i> WhatsApp Due Reminder</button>`;
     document.getElementById('ledgerRows').innerHTML=entries.map(r=>`<tr>
-      <td>${escapeHtml(r[COL.date])}</td><td>${escapeHtml(r[COL.type])}</td><td>${escapeHtml(r[COL.description])}</td>
-      <td>${money(r[COL.udhar])}</td><td>${money(r[COL.payment])}</td><td><b>${money(r[COL.balance])}</b></td>
-      <td>${money(r[COL.interest])}</td><td><b>${money(r[COL.total])}</b></td><td>${escapeHtml(r[COL.due])}</td>
-      <td><span class="badge ${String(r[COL.status]).toLowerCase()}">${escapeHtml(r[COL.status])}</span></td>
-      <td>${escapeHtml(r[COL.mode])}</td><td>${escapeHtml(r[COL.ref])}</td><td>${escapeHtml(r[COL.remarks])}</td>
-      <td><div class="actions"><button class="outline" onclick="closeLedger();editEntry('${escapeHtml(r[COL.id])}')"><i class="fas fa-pen"></i></button><button class="danger" onclick="deleteEntry('${escapeHtml(r[COL.id])}')"><i class="fas fa-trash"></i></button></div></td>
+      <td data-label="Date">${escapeHtml(r[COL.date])}</td><td data-label="Type">${escapeHtml(r[COL.type])}</td><td data-label="Description">${escapeHtml(r[COL.description])}</td>
+      <td data-label="Udhari">${money(r[COL.udhar])}</td><td data-label="Payment">${money(r[COL.payment])}</td><td data-label="Balance"><b>${money(r[COL.balance])}</b></td>
+      <td data-label="Interest">${money(r[COL.interest])}</td><td data-label="Total Payable"><b>${money(r[COL.total])}</b></td><td data-label="Due Date">${escapeHtml(r[COL.due])}</td>
+      <td data-label="Status"><span class="badge ${String(r[COL.status]).toLowerCase()}">${escapeHtml(r[COL.status])}</span></td>
+      <td data-label="Mode">${escapeHtml(r[COL.mode])}</td><td data-label="Reference">${escapeHtml(r[COL.ref])}</td><td data-label="Remarks">${escapeHtml(r[COL.remarks])}</td>
+      <td data-label="Actions"><div class="actions"><button class="outline" onclick="closeLedger();editEntry('${escapeHtml(r[COL.id])}')"><i class="fas fa-pen"></i></button><button class="danger" onclick="deleteEntry('${escapeHtml(r[COL.id])}')"><i class="fas fa-trash"></i></button></div></td>
     </tr>`).join('');
     document.getElementById('ledgerModal').classList.add('open');
   }
@@ -407,7 +425,7 @@
   function openForm(record=null) {
     document.getElementById('entryForm').reset();
     document.getElementById('entryId').value='';
-    document.getElementById('date').value=new Date().toISOString().slice(0,10);
+    document.getElementById('date').value=localTodayIso();
     document.getElementById('interestStartDate').value=document.getElementById('date').value;
     document.getElementById('interestRate').value='0';
     document.getElementById('customerLookup').textContent='';
@@ -432,6 +450,10 @@
 
   async function saveEntry(event) {
     event.preventDefault();
+    const selectedType=document.getElementById('transactionType').value;
+    if(selectedType!=='PAYMENT MILA'&&!document.getElementById('interestStartDate').value) {
+      document.getElementById('interestStartDate').value=document.getElementById('date').value;
+    }
     const data={entryId:document.getElementById('entryId').value,date:isoToDisplay(document.getElementById('date').value),customerName:document.getElementById('customerName').value.trim(),mobileNo:normalizeMobile(document.getElementById('mobileNo').value),address:document.getElementById('address').value.trim(),transactionType:document.getElementById('transactionType').value,description:document.getElementById('description').value.trim(),udharAmount:num(document.getElementById('udharAmount').value),paymentAmount:num(document.getElementById('paymentAmount').value),dueDate:isoToDisplay(document.getElementById('dueDate').value),paymentMode:document.getElementById('paymentMode').value,referenceNo:document.getElementById('referenceNo').value.trim(),reminderDate:isoToDisplay(document.getElementById('reminderDate').value),remarks:document.getElementById('remarks').value.trim(),interestRate:num(document.getElementById('interestRate').value),interestType:document.getElementById('interestType').value,interestStartDate:isoToDisplay(document.getElementById('interestStartDate').value),createdBy:window.parent.currentKrpUser?.email||''};
     if(data.mobileNo.length<10)return alert('Sahi mobile number enter karein');
     if(data.transactionType!=='PAYMENT MILA'&&data.udharAmount<=0)return alert('Udhari amount enter karein');
