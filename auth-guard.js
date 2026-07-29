@@ -8,7 +8,7 @@ import { firebaseConfig, allowedEmails } from "./auth-config.js?v=3";
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 let idleTimer = null;
 let lastActivitySignal = 0;
 
