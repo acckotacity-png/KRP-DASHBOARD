@@ -51,7 +51,7 @@
     .customer-info { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 0; border-top: 1px solid #edf0f8; border-bottom: 1px solid #edf0f8; }
     .customer-info span { color: #7b85a8; font-size: 10px; text-transform: uppercase; }
     .customer-info b { display: block; margin-top: 3px; color: #2b3674; font-size: 13px; }
-    .customer-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 11px; }
+    .customer-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 11px; }
     .ledger-dialog { width: min(1200px, 100%); }
     .ledger-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
     .ledger-summary .card { min-width: 145px; flex: 1; }
@@ -73,7 +73,7 @@
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
     @media (max-width: 1000px) { .customer-grid { grid-template-columns: repeat(2, minmax(260px, 1fr)); } }
     @media (max-width: 800px) { .cards { grid-template-columns: repeat(2, 1fr); } .grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 600px) { body { padding: 7px; } .cards, .customer-grid { grid-template-columns: 1fr; } .grid { grid-template-columns: 1fr; } .field.wide { grid-column: span 1; } }
+    @media (max-width: 600px) { body { padding: 7px; } .cards, .customer-grid { grid-template-columns: 1fr; } .grid { grid-template-columns: 1fr; } .field.wide { grid-column: span 1; } .customer-actions { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -235,6 +235,7 @@
           <div><span>Last Entry</span><b>${escapeHtml(r[COL.date])}</b></div>
         </div>
         <div class="customer-actions">
+          <button class="primary" onclick="addCustomerUdhari('${escapeHtml(c.key)}')"><i class="fas fa-plus"></i> Add Udhari</button>
           <button class="success" onclick="addCustomerPayment('${escapeHtml(c.key)}')"><i class="fas fa-indian-rupee-sign"></i> Add Payment</button>
           <button class="outline" onclick="openLedger('${escapeHtml(c.key)}')"><i class="fas fa-book"></i> Full Ledger</button>
         </div>
@@ -299,6 +300,27 @@
     document.getElementById('paymentAmount').focus();
   }
 
+  function addCustomerUdhari(key) {
+    const customer=findCustomer(key);
+    if(!customer)return;
+    returnToLedgerKey=document.getElementById('ledgerModal').classList.contains('open')?customer.key:'';
+    openForm();
+    const latest=customer.latest;
+    document.getElementById('customerName').value=customer.name||'';
+    document.getElementById('mobileNo').value=customer.mobile||latest[COL.mobile];
+    document.getElementById('address').value=customer.address||'';
+    document.getElementById('transactionType').value='UDHAR DIYA';
+    document.getElementById('udharAmount').value='';
+    document.getElementById('paymentAmount').value='';
+    document.getElementById('description').value='Additional Udhari';
+    document.getElementById('interestRate').value=latest[COL.rate]||0;
+    document.getElementById('interestType').value=latest[COL.interestType]||'MONTHLY';
+    document.getElementById('interestStartDate').value=document.getElementById('date').value;
+    document.getElementById('formTitle').textContent=`Add Udhari - ${customer.name}`;
+    lookupCustomer();
+    document.getElementById('udharAmount').focus();
+  }
+
   function openLedger(key) {
     const customer=findCustomer(key);
     if(!customer)return;
@@ -313,6 +335,7 @@
       <div class="card"><span>Payment Mila</span><strong>${money(totalPayment)}</strong></div>
       <div class="card"><span>Balance</span><strong>${money(latest[COL.balance])}</strong></div>
       <div class="card"><span>Total Payable</span><strong>${money(latest[COL.total])}</strong></div>
+      <button class="primary" onclick="addCustomerUdhari('${escapeHtml(customer.key)}')"><i class="fas fa-plus"></i> Add Udhari</button>
       <button class="success" onclick="addCustomerPayment('${escapeHtml(customer.key)}')"><i class="fas fa-indian-rupee-sign"></i> Add Payment</button>`;
     document.getElementById('ledgerRows').innerHTML=entries.map(r=>`<tr>
       <td>${escapeHtml(r[COL.date])}</td><td>${escapeHtml(r[COL.type])}</td><td>${escapeHtml(r[COL.description])}</td>
