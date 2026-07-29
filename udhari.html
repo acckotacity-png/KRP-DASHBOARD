@@ -60,6 +60,7 @@
     .more { display: none; justify-content: center; padding: 12px; }
     .modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 14px; background: rgba(27,37,89,.45); }
     .modal.open { display: flex; }
+    .modal[hidden] { display: none !important; }
     .dialog { width: min(950px, 100%); max-height: 94vh; overflow: auto; padding: 18px; background: #fff; border-radius: 15px; }
     .dialog-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
     .dialog-head h2 { margin: 0; font-size: 17px; color: #1b2559; }
@@ -127,7 +128,7 @@
   <div id="moreWrap" class="more"><button id="moreButton" class="outline" onclick="toggleMore()">Show 10 More</button></div>
 </main>
 
-<div class="modal" id="ledgerModal">
+<div class="modal" id="ledgerModal" hidden>
   <div class="dialog ledger-dialog">
     <div class="dialog-head"><h2 id="ledgerTitle">Customer Ledger</h2><button class="close" onclick="closeLedger()">&times;</button></div>
     <div id="ledgerSummary" class="ledger-summary"></div>
@@ -445,9 +446,17 @@
       <td data-label="Mode">${escapeHtml(r[COL.mode])}</td><td data-label="Reference">${escapeHtml(r[COL.ref])}</td><td data-label="Remarks">${escapeHtml(r[COL.remarks])}</td>
       <td data-label="Actions"><div class="actions"><button class="outline" onclick="closeLedger();editEntry('${escapeHtml(r[COL.id])}')"><i class="fas fa-pen"></i></button><button class="danger" onclick="deleteEntry('${escapeHtml(r[COL.id])}')"><i class="fas fa-trash"></i></button></div></td>
     </tr>`).join('');
-    document.getElementById('ledgerModal').classList.add('open');
+    const ledgerModal=document.getElementById('ledgerModal');
+    ledgerModal.hidden=false;
+    ledgerModal.classList.add('open');
   }
-  function closeLedger(){document.getElementById('ledgerModal').classList.remove('open');activeLedgerKey='';returnToLedgerKey='';}
+  function closeLedger(){
+    const modal=document.getElementById('ledgerModal');
+    modal.classList.remove('open');
+    modal.hidden=true;
+    activeLedgerKey='';
+    returnToLedgerKey='';
+  }
 
   function openForm(record=null) {
     document.getElementById('entryForm').reset();
@@ -489,9 +498,10 @@
     try {
       const action=data.entryId?'updateUdhariRecord':'saveUdhariRecord';
       const ledgerKey=returnToLedgerKey||activeLedgerKey;
+      closeForm();
+      closeLedger();
       const result=await request({action,data:JSON.stringify(data)});
       if(!result.success)throw new Error(result.error||'Save failed');
-      closeForm();
       if(!applyServerData(result,data.entryId?'Entry updated':'Entry saved')) await loadData(true);
       if(ledgerKey) openLedger(ledgerKey);
       returnToLedgerKey='';
