@@ -51,7 +51,8 @@
     .customer-info { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 0; border-top: 1px solid #edf0f8; border-bottom: 1px solid #edf0f8; }
     .customer-info span { color: #7b85a8; font-size: 10px; text-transform: uppercase; }
     .customer-info b { display: block; margin-top: 3px; color: #2b3674; font-size: 13px; }
-    .customer-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 11px; }
+    .customer-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; margin-top: 11px; }
+    .whatsapp { background: #25d366; color: #fff; }
     .ledger-dialog { width: min(1200px, 100%); }
     .ledger-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
     .ledger-summary .card { min-width: 145px; flex: 1; }
@@ -238,6 +239,7 @@
           <button class="primary" onclick="addCustomerUdhari('${escapeHtml(c.key)}')"><i class="fas fa-plus"></i> Add Udhari</button>
           <button class="success" onclick="addCustomerPayment('${escapeHtml(c.key)}')"><i class="fas fa-indian-rupee-sign"></i> Add Payment</button>
           <button class="outline" onclick="openLedger('${escapeHtml(c.key)}')"><i class="fas fa-book"></i> Full Ledger</button>
+          <button class="whatsapp" onclick="shareWhatsApp('${escapeHtml(c.key)}')"><i class="fab fa-whatsapp"></i> Due Reminder</button>
         </div>
       </article>`;
     }).join(''):'<div class="empty-state"><i class="fas fa-user-slash"></i><br><br>No customer found</div>';
@@ -334,6 +336,27 @@
     document.getElementById('udharAmount').focus();
   }
 
+  function shareWhatsApp(key) {
+    const customer=findCustomer(key);
+    if(!customer)return;
+    const latest=customer.latest;
+    const mobile=normalizeMobile(customer.mobile||latest[COL.mobile]);
+    if(mobile.length!==10)return alert('Customer ka sahi 10-digit mobile number nahi mila');
+    const dueEntry=[...customer.entries].reverse().find(r=>r[COL.due]);
+    const dueDate=dueEntry?.[COL.due]||'जल्द से जल्द';
+    const message=[
+      `नमस्ते ${customer.name||'जी'},`,
+      '',
+      'यह आपके बकाया भुगतान का reminder है।',
+      `बकाया राशि: ${money(latest[COL.balance])}`,
+      `ब्याज सहित कुल देय: ${money(latest[COL.total])}`,
+      `Due Date: ${dueDate}`,
+      '',
+      'कृपया भुगतान करके जानकारी साझा करें। धन्यवाद।'
+    ].join('\n');
+    window.open(`https://wa.me/91${mobile}?text=${encodeURIComponent(message)}`,'_blank','noopener');
+  }
+
   function openLedger(key) {
     const customer=findCustomer(key);
     if(!customer)return;
@@ -349,7 +372,8 @@
       <div class="card"><span>Balance</span><strong>${money(latest[COL.balance])}</strong></div>
       <div class="card"><span>Total Payable</span><strong>${money(latest[COL.total])}</strong></div>
       <button class="primary" onclick="addCustomerUdhari('${escapeHtml(customer.key)}')"><i class="fas fa-plus"></i> Add Udhari</button>
-      <button class="success" onclick="addCustomerPayment('${escapeHtml(customer.key)}')"><i class="fas fa-indian-rupee-sign"></i> Add Payment</button>`;
+      <button class="success" onclick="addCustomerPayment('${escapeHtml(customer.key)}')"><i class="fas fa-indian-rupee-sign"></i> Add Payment</button>
+      <button class="whatsapp" onclick="shareWhatsApp('${escapeHtml(customer.key)}')"><i class="fab fa-whatsapp"></i> WhatsApp Due Reminder</button>`;
     document.getElementById('ledgerRows').innerHTML=entries.map(r=>`<tr>
       <td>${escapeHtml(r[COL.date])}</td><td>${escapeHtml(r[COL.type])}</td><td>${escapeHtml(r[COL.description])}</td>
       <td>${money(r[COL.udhar])}</td><td>${money(r[COL.payment])}</td><td><b>${money(r[COL.balance])}</b></td>
