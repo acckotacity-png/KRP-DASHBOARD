@@ -135,7 +135,7 @@
         <div class="field"><label>Customer Name *</label><input id="customerName" required></div>
         <div class="field"><label>Mobile No. *</label><input id="mobileNo" inputmode="numeric" maxlength="15" oninput="lookupCustomer()" required><small id="customerLookup" class="status"></small></div>
         <div class="field"><label>Address / State</label><input id="address"></div>
-        <div class="field"><label>Transaction Type</label><select id="transactionType" onchange="applyType()"><option>UDHAR DIYA</option><option>PAYMENT MILA</option></select></div>
+        <div class="field"><label>Transaction Type</label><select id="transactionType" onchange="applyType()"><option>UDHAR DIYA</option><option>UDHAR LIYA</option><option>PAYMENT MILA</option></select></div>
         <div class="field"><label>Description</label><input id="description"></div>
         <div class="field"><label>Udhari Diya Amount</label><input type="number" step="0.01" id="udharAmount"></div>
         <div class="field"><label>Payment Mila Amount</label><input type="number" step="0.01" id="paymentAmount"></div>
@@ -259,7 +259,20 @@
   function handleSearch(value) { query=value;visible=10;document.getElementById('clearSearch').style.display=value?'block':'none';render(); }
   function clearSearch() { const el=document.getElementById('searchInput');el.value='';query='';visible=10;document.getElementById('clearSearch').style.display='none';render();el.focus(); }
   function toggleMore() { visible=visible>=filteredCount?10:visible+10;render(); }
-  function applyType() { const type=document.getElementById('transactionType').value; if(type==='UDHAR DIYA')document.getElementById('paymentAmount').value=''; else document.getElementById('udharAmount').value=''; }
+  function applyType() {
+    const type=document.getElementById('transactionType').value;
+    const description=document.getElementById('description');
+    if(type==='PAYMENT MILA') {
+      document.getElementById('udharAmount').value='';
+      description.value='Customer se payment mila';
+    } else if(type==='UDHAR LIYA') {
+      document.getElementById('paymentAmount').value='';
+      description.value='Customer ne udhar liya';
+    } else {
+      document.getElementById('paymentAmount').value='';
+      description.value='Customer ko udhar diya';
+    }
+  }
 
   function findCustomer(keyOrMobile) {
     const wanted=normalizeMobile(keyOrMobile);
@@ -356,6 +369,7 @@
     document.getElementById('interestStartDate').value=document.getElementById('date').value;
     document.getElementById('interestRate').value='0';
     document.getElementById('customerLookup').textContent='';
+    applyType();
     document.getElementById('formTitle').textContent=record?'Edit Udhari Entry':'Add Udhari Entry';
     if(record) {
       document.getElementById('entryId').value=record[COL.id]; document.getElementById('date').value=displayToIso(record[COL.date]);
@@ -377,7 +391,7 @@
     event.preventDefault();
     const data={entryId:document.getElementById('entryId').value,date:isoToDisplay(document.getElementById('date').value),customerName:document.getElementById('customerName').value.trim(),mobileNo:normalizeMobile(document.getElementById('mobileNo').value),address:document.getElementById('address').value.trim(),transactionType:document.getElementById('transactionType').value,description:document.getElementById('description').value.trim(),udharAmount:num(document.getElementById('udharAmount').value),paymentAmount:num(document.getElementById('paymentAmount').value),dueDate:isoToDisplay(document.getElementById('dueDate').value),paymentMode:document.getElementById('paymentMode').value,referenceNo:document.getElementById('referenceNo').value.trim(),reminderDate:isoToDisplay(document.getElementById('reminderDate').value),remarks:document.getElementById('remarks').value.trim(),interestRate:num(document.getElementById('interestRate').value),interestType:document.getElementById('interestType').value,interestStartDate:isoToDisplay(document.getElementById('interestStartDate').value),createdBy:window.parent.currentKrpUser?.email||''};
     if(data.mobileNo.length<10)return alert('Sahi mobile number enter karein');
-    if(data.transactionType==='UDHAR DIYA'&&data.udharAmount<=0)return alert('Udhari amount enter karein');
+    if(data.transactionType!=='PAYMENT MILA'&&data.udharAmount<=0)return alert('Udhari amount enter karein');
     if(data.transactionType==='PAYMENT MILA'&&data.paymentAmount<=0)return alert('Payment amount enter karein');
     const button=document.getElementById('saveButton');button.disabled=true;setStatus('Saving...');
     try {
