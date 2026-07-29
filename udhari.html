@@ -132,7 +132,7 @@
     <form id="entryForm" onsubmit="saveEntry(event)">
       <input type="hidden" id="entryId">
       <div class="grid">
-        <div class="field"><label>Date *</label><input type="date" id="date" required></div>
+        <div class="field"><label>Date *</label><input type="date" id="date" onchange="syncInterestDate()" required></div>
         <div class="field"><label>Customer Name *</label><input id="customerName" required></div>
         <div class="field"><label>Mobile No. *</label><input id="mobileNo" inputmode="numeric" maxlength="15" oninput="lookupCustomer()" required><small id="customerLookup" class="status"></small></div>
         <div class="field"><label>Address / State</label><input id="address"></div>
@@ -261,18 +261,34 @@
   function handleSearch(value) { query=value;visible=10;document.getElementById('clearSearch').style.display=value?'block':'none';render(); }
   function clearSearch() { const el=document.getElementById('searchInput');el.value='';query='';visible=10;document.getElementById('clearSearch').style.display='none';render();el.focus(); }
   function toggleMore() { visible=visible>=filteredCount?10:visible+10;render(); }
-  function applyType() {
+  function applyType(updateDescription=true) {
     const type=document.getElementById('transactionType').value;
     const description=document.getElementById('description');
+    const rate=document.getElementById('interestRate');
+    const interestType=document.getElementById('interestType');
+    const interestStart=document.getElementById('interestStartDate');
+    const isPayment=type==='PAYMENT MILA';
+    rate.disabled=isPayment;
+    interestType.disabled=isPayment;
+    interestStart.disabled=isPayment;
     if(type==='PAYMENT MILA') {
       document.getElementById('udharAmount').value='';
-      description.value='Customer se payment mila';
+      rate.value='0';
+      interestStart.value='';
+      if(updateDescription)description.value='Customer se payment mila';
     } else if(type==='UDHAR LIYA') {
       document.getElementById('paymentAmount').value='';
-      description.value='Customer ne udhar liya';
+      if(!interestStart.value)interestStart.value=document.getElementById('date').value;
+      if(updateDescription)description.value='Customer ne udhar liya';
     } else {
       document.getElementById('paymentAmount').value='';
-      description.value='Customer ko udhar diya';
+      if(!interestStart.value)interestStart.value=document.getElementById('date').value;
+      if(updateDescription)description.value='Customer ko udhar diya';
+    }
+  }
+  function syncInterestDate() {
+    if(document.getElementById('transactionType').value!=='PAYMENT MILA') {
+      document.getElementById('interestStartDate').value=document.getElementById('date').value;
     }
   }
 
@@ -306,10 +322,8 @@
     document.getElementById('mobileNo').value=customer.mobile||latest[COL.mobile];
     document.getElementById('address').value=customer.address||'';
     document.getElementById('transactionType').value='PAYMENT MILA';
+    applyType();
     document.getElementById('description').value='Part / full payment received';
-    document.getElementById('interestRate').value=latest[COL.rate]||0;
-    document.getElementById('interestType').value=latest[COL.interestType]||'MONTHLY';
-    document.getElementById('interestStartDate').value=displayToIso(latest[COL.interestStart]||latest[COL.date]);
     document.getElementById('formTitle').textContent=`Payment - ${customer.name}`;
     lookupCustomer();
     document.getElementById('paymentAmount').focus();
@@ -405,6 +419,7 @@
       document.getElementById('reminderDate').value=displayToIso(record[COL.reminder]); document.getElementById('remarks').value=record[COL.remarks];
       document.getElementById('interestRate').value=record[COL.rate]; document.getElementById('interestType').value=record[COL.interestType]||'MONTHLY';
       document.getElementById('interestStartDate').value=displayToIso(record[COL.interestStart]);
+      applyType(false);
     }
     document.getElementById('entryModal').classList.add('open');
   }
