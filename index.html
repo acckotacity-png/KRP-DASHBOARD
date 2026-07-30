@@ -42,6 +42,10 @@
         .settings-hub-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .settings-hub-option { min-height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; border: 1px solid #d8deef; border-radius: 13px; background: #f8faff; color: #1b2559; font-weight: 700; cursor: pointer; }
         .settings-hub-option i { font-size: 23px; color: #4318ff; }
+        @media (min-width: 769px) {
+            .profile-header { padding-right: 68px; }
+            .view-filter { max-width: calc(100% - 42px); }
+        }
         body.form-view .tracker-dashboard-only { display: none !important; }
         
         /* Stats Cards */
