@@ -24,11 +24,12 @@
         
         /* Profile Header */
         .profile-header {
-            background-color: #1b2559; color: white; border-radius: 15px; padding: 20px 105px 20px 20px;
+            background-color: #1b2559; color: white; border-radius: 15px; padding: 20px;
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
             box-shadow: 0 10px 20px rgba(27, 37, 89, 0.1); flex-wrap: wrap; gap: 15px; position: relative;
         }
         .profile-info h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+        .profile-info { padding-right: 42px; }
         .profile-info p { font-size: 12px; color: #a3aed1; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
         .view-filter { display: flex; align-items: center; gap: 10px; font-size: 14px; flex-wrap: wrap; }
         .tracker-dashboard-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -430,7 +431,7 @@
         @media (max-width: 768px) {
             body { padding: 8px; }
             .container { max-width: 100%; }
-            .profile-header { border-radius: 12px; padding: 14px 85px 14px 14px; gap: 12px; align-items: flex-start; }
+            .profile-header { border-radius: 12px; padding: 14px; gap: 12px; align-items: flex-start; }
             .profile-info h1 { font-size: 18px; }
             .profile-info p { display: block; line-height: 1.7; }
             .view-filter {
@@ -592,7 +593,6 @@
 
         @media (max-width: 480px) {
             .profile-header { padding: 10px; gap: 8px; margin-bottom: 10px; }
-            .profile-header { padding-right: 65px; }
             .btn-logout-corner { right: 8px; top: 8px; padding: 6px 7px !important; font-size: 0 !important; min-width: 28px; min-height: 27px; }
             .btn-logout-corner i { font-size: 11px !important; margin: 0; }
             .profile-info h1 { font-size: 15px; margin-bottom: 3px; }
@@ -602,8 +602,9 @@
                 gap: 4px;
                 overflow-x: auto;
                 padding-bottom: 2px;
-                scrollbar-width: thin;
+                scrollbar-width: none;
             }
+            .view-filter::-webkit-scrollbar { display: none; }
             .view-filter .btn-settings,
             .view-filter .btn-toggle-view,
             .view-filter .btn-upi,
