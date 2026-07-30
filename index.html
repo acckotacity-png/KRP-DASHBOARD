@@ -24,9 +24,9 @@
         
         /* Profile Header */
         .profile-header {
-            background-color: #1b2559; color: white; border-radius: 15px; padding: 20px;
+            background-color: #1b2559; color: white; border-radius: 15px; padding: 20px 105px 20px 20px;
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
-            box-shadow: 0 10px 20px rgba(27, 37, 89, 0.1); flex-wrap: wrap; gap: 15px;
+            box-shadow: 0 10px 20px rgba(27, 37, 89, 0.1); flex-wrap: wrap; gap: 15px; position: relative;
         }
         .profile-info h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
         .profile-info p { font-size: 12px; color: #a3aed1; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
@@ -37,6 +37,10 @@
         .btn-settings { background: #ff9800; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
         .btn-upi { background: #05cd99; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
         .btn-notepad { background: #4318ff; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+        .btn-logout-corner { position: absolute; right: 10px; top: 10px; z-index: 5; }
+        .settings-hub-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .settings-hub-option { min-height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; border: 1px solid #d8deef; border-radius: 13px; background: #f8faff; color: #1b2559; font-weight: 700; cursor: pointer; }
+        .settings-hub-option i { font-size: 23px; color: #4318ff; }
         body.form-view .tracker-dashboard-only { display: none !important; }
         
         /* Stats Cards */
@@ -426,7 +430,7 @@
         @media (max-width: 768px) {
             body { padding: 8px; }
             .container { max-width: 100%; }
-            .profile-header { border-radius: 12px; padding: 14px; gap: 12px; align-items: flex-start; }
+            .profile-header { border-radius: 12px; padding: 14px 85px 14px 14px; gap: 12px; align-items: flex-start; }
             .profile-info h1 { font-size: 18px; }
             .profile-info p { display: block; line-height: 1.7; }
             .view-filter {
@@ -588,6 +592,9 @@
 
         @media (max-width: 480px) {
             .profile-header { padding: 10px; gap: 8px; margin-bottom: 10px; }
+            .profile-header { padding-right: 65px; }
+            .btn-logout-corner { right: 8px; top: 8px; padding: 6px 7px !important; font-size: 0 !important; min-width: 28px; min-height: 27px; }
+            .btn-logout-corner i { font-size: 11px !important; margin: 0; }
             .profile-info h1 { font-size: 15px; margin-bottom: 3px; }
             .profile-info p { font-size: 10px; line-height: 1.45; }
             .view-filter {
@@ -800,17 +807,16 @@
             </p>
         </div>
         <div class="view-filter">
-            <button class="btn-upi" onclick="openUpiModal()"><i class="fas fa-wallet"></i> Payment Settings</button>
-            <button class="btn-settings" onclick="openSettingsModal()"><i class="fas fa-cog"></i> Settings</button>
+            <button class="btn-settings" onclick="openHeaderSettingsHub()"><i class="fas fa-sliders-h"></i> Settings Menu</button>
             <button class="btn-notepad" onclick="switchTab('expense')"><i class="fas fa-receipt"></i> Expenses</button>
             <button class="btn-notepad" onclick="switchTab('udhari')"><i class="fas fa-book-open"></i> Udhari Khata</button>
             <button class="btn-notepad" onclick="switchTab('notepad')"><i class="fas fa-note-sticky"></i> Notepad</button>
             <button class="btn-upi" onclick="switchTab('transaction')"><i class="fas fa-money-bill-transfer"></i> KRP Transaction</button>
-            <button class="btn-settings" onclick="logoutKrpDashboard()"><i class="fas fa-right-from-bracket"></i> Logout</button>
             <div class="tracker-dashboard-only tracker-dashboard-controls">
                 <select id="mainMonthFilter" onchange="handleMainMonthFilterChange()" title="Filter by month"><option value="all">All Months</option></select>
             </div>
         </div>
+        <button class="btn-settings btn-logout-corner" onclick="logoutKrpDashboard()" title="Logout" aria-label="Logout"><i class="fas fa-right-from-bracket"></i> <span>Logout</span></button>
     </div>
 
     <button type="button" class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-controls="mainNavTabs" aria-expanded="false">
@@ -1334,6 +1340,19 @@
     </div>
 </div>
 
+<div id="headerSettingsHub" class="modal-overlay">
+    <div class="modal-content" style="max-width: 390px;">
+        <div class="modal-header">
+            <span><i class="fas fa-sliders-h"></i> Settings Menu</span>
+            <i class="fas fa-times close-modal" onclick="closeHeaderSettingsHub()"></i>
+        </div>
+        <div class="settings-hub-options">
+            <button type="button" class="settings-hub-option" onclick="openPaymentFromHub()"><i class="fas fa-wallet"></i><span>Payment Settings</span></button>
+            <button type="button" class="settings-hub-option" onclick="openBusinessFromHub()"><i class="fas fa-building"></i><span>Business Settings</span></button>
+        </div>
+    </div>
+</div>
+
 <div id="settingsModal" class="modal-overlay">
     <div class="modal-content" style="max-width: 500px;">
         <div class="modal-header">
@@ -1715,6 +1734,10 @@
         return result;
     }
 
+    function openHeaderSettingsHub() { document.getElementById('headerSettingsHub').classList.add('active'); }
+    function closeHeaderSettingsHub() { document.getElementById('headerSettingsHub').classList.remove('active'); }
+    function openPaymentFromHub() { closeHeaderSettingsHub(); openUpiModal(); }
+    function openBusinessFromHub() { closeHeaderSettingsHub(); openSettingsModal(); }
     function openSettingsModal() { document.getElementById('settingsModal').classList.add('active'); }
     function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('active'); }
     function openUpiModal() { document.getElementById('upiModal').classList.add('active'); }
