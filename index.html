@@ -2584,13 +2584,17 @@
         const idxIdAct = getColIndex('ID ACTIVATION AMOUNT');
         const idxLogin = getColIndex('LOGIN ID');
 
-        const purposeText = idxPurpose !== -1 ? getPurposeYearForMessage(record[idxPurpose]) : '';
+        const rawPurpose = idxPurpose !== -1 ? record[idxPurpose] : '';
+        const purposeParts = getPurposeValidationParts(rawPurpose);
+        const activationCount = Math.max(purposeParts.purposes.length, 1);
+        const purposeText = getPurposeYearForMessage(rawPurpose);
         const stateText = idxState !== -1 ? showSheetText(record[idxState]).trim() : '';
         const amountText = idxIdAct !== -1 ? (parseFloat(record[idxIdAct]) || 0).toLocaleString('en-IN') : '0';
         const loginText = idxLogin !== -1 ? showSheetText(record[idxLogin]).trim() : '';
         const serialPrefix = showSheetText(serialNo).trim() || '';
 
-        return `${serialPrefix ? serialPrefix + '. ' : ''}ID ACTIVATION FOR ${purposeText}${stateText ? ' ' + stateText : ''} - ${amountText}/-\n\n${loginText}`;
+        const activationLabel = activationCount === 1 ? 'ID ACTIVATION' : 'ID ACTIVATIONS';
+        return `${serialPrefix ? serialPrefix + '. ' : ''}${activationCount} ${activationLabel} FOR ${purposeText}${stateText ? ' ' + stateText : ''} - ${amountText}/-\n\n${loginText}`;
     }
 
     function sendIdActivationWhatsApp(rowIndex, serialNo = '') {
@@ -2916,6 +2920,10 @@
             .filter(Boolean)
             .sort();
         return { purposes, years };
+    }
+
+    function getIdActivationPurposeCount(value) {
+        return Math.max(getPurposeValidationParts(value).purposes.length, 1);
     }
 
     function getPurposeValidationKey(value) {
@@ -3460,7 +3468,7 @@
         const monthMap = {};
         const dailyMap = {};
         const allDataMonthMap = {};
-        let totalDeal = 0, totalReceived = 0, totalDue = 0, totalSetup = 0, totalId = 0;
+        let totalDeal = 0, totalReceived = 0, totalDue = 0, totalSetup = 0, totalId = 0, totalIdCount = 0;
 
         currentData.forEach(row => {
             const dateKey = idxDate !== -1 ? getLocalISODate(row[idxDate]) : '';
@@ -3486,6 +3494,9 @@
             totalDue += due;
             totalSetup += setup;
             totalId += idAct;
+            if (status !== 'REFUND' && idAct > 0) {
+                totalIdCount += idxPurpose !== -1 ? getIdActivationPurposeCount(row[idxPurpose]) : 1;
+            }
 
             const bankName = idxBank !== -1 ? (row[idxBank] || '').toString().trim() : '';
             const bankKey = bankName || 'Unknown Bank';
@@ -3509,7 +3520,7 @@
             <div class="mini-kpi"><span>Dealing Amount</span><strong>${formatMoney(totalDeal)}</strong></div>
             <div class="mini-kpi"><span>Received</span><strong>${formatMoney(totalReceived)}</strong></div>
             <div class="mini-kpi"><span>Pending Due</span><strong style="color:#ee5d50;">${formatMoney(totalDue)}</strong></div>
-            <div class="mini-kpi"><span>ID Activation</span><strong style="color:#05cd99;">${formatMoney(totalId)}</strong></div>
+            <div class="mini-kpi"><span>ID Activation</span><strong style="color:#05cd99;">${totalIdCount} IDs | ${formatMoney(totalId)}</strong></div>
             <div class="mini-kpi"><span>Setup Amount</span><strong>${formatMoney(totalSetup)}</strong></div>
         `;
 
@@ -3655,6 +3666,7 @@
         const idxRecv = getColIndex('RECEIVED AMOUNT');
         const idxSetup = getColIndex('UPLOADING OR SETUP AMOUNT');
         const idxIdAct = getColIndex('ID ACTIVATION AMOUNT');
+        const idxPurpose = getColIndex('PURPOSE');
         const draft = readRecordsTrackerDraft();
 
         const groups = new Map();
@@ -3694,7 +3706,9 @@
             existing.month = filters.viewMode === 'daily'
                 ? (dStr ? new Date(dStr + 'T00:00:00').toLocaleString('default', { month: 'short', year: '2-digit' }) : '-')
                 : key;
-            existing.totalId += idAct > 0 ? 1 : 0;
+            existing.totalId += idAct > 0
+                ? (idxPurpose !== -1 ? getIdActivationPurposeCount(row[idxPurpose]) : 1)
+                : 0;
             existing.working += deal;
             existing.transfer += recv;
             existing.pending += pending;
@@ -4170,6 +4184,7 @@
         const idxSetup   = getColIndex('UPLOADING OR SETUP AMOUNT');
         const idxLogin   = getColIndex('LOGIN ID');
         const idxIdAct   = getColIndex('ID ACTIVATION AMOUNT');
+        const idxPurpose = getColIndex('PURPOSE');
 
         let pCount=0,pAmt=0,sCount=0,sAmt=0,advCount=0,advAmt=0,refCount=0,refAmt=0, partialCount=0;
         let totCount=data.length,totAmt=0,setupCount=0,setupAmt=0,idCount=0,idActAmt=0, totalDueAmt=0;
@@ -4182,7 +4197,9 @@
             let loginId = row[idxLogin]?.toString().trim() || '';
             
             if (status !== 'REFUND') {
-                if (loginId !== '') idCount++;
+                if (loginId !== '') {
+                    idCount += idxPurpose !== -1 ? getIdActivationPurposeCount(row[idxPurpose]) : 1;
+                }
                 idActAmt += idAmt;
 
                 if (supAmt !== 0) setupCount++;
