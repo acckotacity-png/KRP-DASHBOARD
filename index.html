@@ -291,7 +291,6 @@
         .badge-partial { background: #e6f2ff; color: #ff9800; border: 1px dashed #ff9800; }
         
         .action-icons { display: flex; gap: 4px; justify-content: flex-end; flex-wrap: wrap; }
-        .btn-duplicate { background: #e8f1ff; color: #2b6cb0; }
         .action-btn { width: 24px; height: 24px; border-radius: 6px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; flex: 0 0 auto; }
         .btn-whatsapp { background: #e6fcf5; color: #05cd99; }
         .btn-wa-direct { background: #25D366; color: #fff; }
@@ -3413,7 +3412,6 @@
                         ${reminderButtonHtml}
                         ${smsReminderButtonHtml}
                         <button type="button" class="action-btn btn-print"    onclick="openPrintChoice(${originalIdx})" title="Print Invoice"><i class="fas fa-print"></i></button>
-                        <button type="button" class="action-btn btn-duplicate" onclick="duplicateTrackerRecord(${originalIdx})" title="Duplicate Entry"><i class="fas fa-copy"></i></button>
                         <button type="button" class="action-btn btn-edit"     onclick="openFullEditModal(${originalIdx})" title="Full Edit"><i class="fas fa-edit"></i></button>
                         <button type="button" class="action-btn btn-config"   onclick="openPaymentModal(${originalIdx})" title="Quick Update"><i class="fas fa-sliders-h"></i></button>
                         <button type="button" class="action-btn btn-delete"   onclick="deleteRecord(${originalIdx})" title="Delete"><i class="fas fa-trash-alt"></i></button>
@@ -3426,37 +3424,6 @@
 
     function formatMoney(value) {
         return 'Rs. ' + (parseFloat(value) || 0).toLocaleString('en-IN');
-    }
-
-    function duplicateTrackerRecord(rowIndex) {
-        const record = currentData[rowIndex];
-        if (!record) return showMessage('Record not found', 'error');
-
-        switchTab('form');
-        const form = document.getElementById('entryForm');
-        if (form) form.reset();
-
-        document.getElementById('invoiceNo').value = record[getColIndex('INVOICE NO.')] || '';
-        document.getElementById('date').value = getLocalISODate(record[getColIndex('DATE')]);
-        document.getElementById('contactName').value = showSheetText(record[getColIndex('CONTACT NO. OR NAME')]) || '';
-        document.getElementById('bankOwner').value = record[getColIndex('BANK OWNER NAME')] || '';
-        document.getElementById('state').value = record[getColIndex('STATE')] || '';
-        setMultiSelectState('purpose', '');
-        setMultiSelectState('serviceRemarks', record[getColIndex('SERVICE CHARGE REMARKS')] || '');
-        document.getElementById('loginId').value = record[getColIndex('LOGIN ID')] || '';
-        document.getElementById('dealingAmount').value = record[getColIndex('DEALING AMOUNT')] || '';
-        document.getElementById('amountDeno').value = record[getColIndex('AMOUNT DENO')] || '';
-        document.getElementById('receivedAmount').value = record[getColIndex('RECEIVED AMOUNT')] || '';
-        document.getElementById('idActivationAmount').value = record[getColIndex('ID ACTIVATION AMOUNT')] || '';
-        document.getElementById('uploadingAmount').value = record[getColIndex('UPLOADING OR SETUP AMOUNT')] || '';
-        document.getElementById('utrNo').value = '';
-        document.getElementById('paymentStatus').value = record[getColIndex('PAYMENT STATUS')] || 'PENDING';
-        document.getElementById('remarks').value = record[getColIndex('REMARKS')] || '';
-        dismissedDefaulterLookupKey = '';
-        activeDefaulterMatch = null;
-        document.getElementById('purpose')?.focus();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        showMessage('Entry duplicated. Naya Purpose select karke Save karein.', 'success');
     }
 
     function renderBarRows(items, maxValue, className = '') {
