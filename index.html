@@ -289,6 +289,9 @@
         .badge-refund { background: #e6f2ff; color: #4318ff; }
         .badge-advance { background: #f0f0f0; color: #333; }
         .badge-partial { background: #e6f2ff; color: #ff9800; border: 1px dashed #ff9800; }
+        .id-count-cell { min-width: 115px; }
+        .id-count-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 14px; background: #e6fcf5; color: #008f68; font-size: 10px; font-weight: 800; white-space: nowrap; }
+        .id-purpose-preview { display: block; max-width: 150px; margin-top: 4px; color: #6b7280; font-size: 9px; line-height: 1.25; white-space: normal; }
         
         .action-icons { display: flex; gap: 4px; justify-content: flex-end; flex-wrap: wrap; }
         .action-btn { width: 24px; height: 24px; border-radius: 6px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; flex: 0 0 auto; }
@@ -1086,7 +1089,7 @@
                 <table id="dataTable">
                     <thead>
                         <tr>
-                            <th>Invoice</th><th>Date</th><th>Contact</th><th>Bank</th>
+                            <th>Invoice</th><th>ID Details</th><th>Date</th><th>Contact</th><th>Bank</th>
                             <th>Status</th><th>Dealing Amt</th><th>Amt Deno</th><th>UTR</th><th>Actions</th>
                         </tr>
                     </thead>
@@ -3352,6 +3355,8 @@
         const idxDealing = getColIndex('DEALING AMOUNT');
         const idxAmtDeno = getColIndex('AMOUNT DENO');
         const idxUtr     = getColIndex('UTR / TRN NO.');
+        const idxPurpose = getColIndex('PURPOSE');
+        const idxLogin   = getColIndex('LOGIN ID');
 
         let filtered = currentData.filter(row => {
             if (filters.statusF !== 'all' && idxStatus !== -1 && (row[idxStatus]?.toString().toUpperCase() || '') !== filters.statusF) return false;
@@ -3372,7 +3377,7 @@
         updateStats(filtered);
 
         if (!filtered.length) {
-            document.getElementById('tableBody').innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px;">📭 No records found</td></tr>';
+            document.getElementById('tableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px;">📭 No records found</td></tr>';
             return;
         }
 
@@ -3401,9 +3406,17 @@
             const idActivationSerialNo = getIdActivationSerialNo(originalIdx);
             const idActivationButtonHtml = idActivationSerialNo ?
                 `<button type="button" class="action-btn btn-wa-direct" onclick="sendIdActivationWhatsApp(${originalIdx}, '${idActivationSerialNo}')" title="Send ID Activation WhatsApp"><i class="fas fa-comment-dots"></i></button>` : '';
+            const rawPurpose = idxPurpose !== -1 ? showSheetText(row[idxPurpose]).trim() : '';
+            const hasIdEntry = statusVal !== 'REFUND' && idxLogin !== -1 && showSheetText(row[idxLogin]).trim() !== '';
+            const rowIdCount = hasIdEntry ? getIdActivationPurposeCount(rawPurpose) : 0;
+            const purposeNames = getPurposeValidationParts(rawPurpose).purposes.join(', ');
+            const idDetailsHtml = rowIdCount
+                ? `<span class="id-count-badge"><i class="fas fa-id-card"></i>${rowIdCount} ${rowIdCount === 1 ? 'ID' : 'IDs'}</span>${purposeNames ? `<small class="id-purpose-preview">${escapeHtml(purposeNames)}</small>` : ''}`
+                : '<span style="color:#a3aed1;">-</span>';
 
             html += `<tr>
                 <td data-label="Invoice"><strong>${row[idxInv] || '-'}</strong></td>
+                <td data-label="ID Details" class="id-count-cell">${idDetailsHtml}</td>
                 <td data-label="Date">${dateDisplay}</td>
                 <td data-label="Contact">${contactHtml}</td>
                 <td data-label="Bank">${row[idxBank] || '-'}</td>
