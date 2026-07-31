@@ -1622,6 +1622,7 @@
     function buildIdActivationSerialMap(rows = currentData) {
         const idxDate = getColIndex('DATE');
         const idxIdAct = getColIndex('ID ACTIVATION AMOUNT');
+        const idxPurpose = getColIndex('PURPOSE');
         const monthGroups = new Map();
 
         rows.forEach((row, rowIndex) => {
@@ -1634,6 +1635,9 @@
             monthGroups.get(monthKey).push({
                 rowIndex,
                 dateKey: idxDate !== -1 ? (getLocalISODate(row[idxDate]) || '') : '',
+                purposeCount: idxPurpose !== -1
+                    ? Math.max(getPurposeValidationParts(row[idxPurpose]).purposes.length, 1)
+                    : 1,
             });
         });
 
@@ -1643,9 +1647,20 @@
                 if (a.dateKey !== b.dateKey) return b.dateKey.localeCompare(a.dateKey);
                 return b.rowIndex - a.rowIndex;
             });
-            let serial = items.length;
+            let serial = items.reduce((sum, item) => sum + item.purposeCount, 0);
             items.forEach(item => {
-                serialMap.set(item.rowIndex, serial--);
+                const firstSerial = serial - item.purposeCount + 1;
+                const serialNumbers = Array.from(
+                    { length: item.purposeCount },
+                    (_, offset) => firstSerial + offset
+                );
+                const serialLabel = serialNumbers.length === 1
+                    ? String(serialNumbers[0])
+                    : serialNumbers.length === 2
+                        ? `${serialNumbers[0]} & ${serialNumbers[1]}`
+                        : `${serialNumbers.slice(0, -1).join(', ')} & ${serialNumbers.at(-1)}`;
+                serialMap.set(item.rowIndex, serialLabel);
+                serial -= item.purposeCount;
             });
         });
 
@@ -3378,7 +3393,7 @@
                 `<button type="button" class="action-btn btn-sms" onclick="sendSmsReminder(${originalIdx})" title="Send SMS Payment Reminder"><i class="fas fa-sms"></i></button>` : '';
             const idActivationSerialNo = getIdActivationSerialNo(originalIdx);
             const idActivationButtonHtml = idActivationSerialNo ?
-                `<button type="button" class="action-btn btn-wa-direct" onclick="sendIdActivationWhatsApp(${originalIdx}, ${idActivationSerialNo})" title="Send ID Activation WhatsApp"><i class="fas fa-comment-dots"></i></button>` : '';
+                `<button type="button" class="action-btn btn-wa-direct" onclick="sendIdActivationWhatsApp(${originalIdx}, '${idActivationSerialNo}')" title="Send ID Activation WhatsApp"><i class="fas fa-comment-dots"></i></button>` : '';
 
             html += `<tr>
                 <td data-label="Invoice"><strong>${row[idxInv] || '-'}</strong></td>
@@ -3411,13 +3426,6 @@
 
     function formatMoney(value) {
         return 'Rs. ' + (parseFloat(value) || 0).toLocaleString('en-IN');
-    }
-
-    function getInvoiceAmountKey(row, rowIndex) {
-        const idxInvoice = getColIndex('INVOICE NO.');
-        const invoiceNo = idxInvoice !== -1 ? (row[idxInvoice] || '').toString().trim().toUpperCase() : '';
-        // Blank invoice numbers must remain separate records.
-        return invoiceNo ? `invoice:${invoiceNo}` : `row:${rowIndex}`;
     }
 
     function duplicateTrackerRecord(rowIndex) {
@@ -3487,20 +3495,14 @@
         const allDataMonthMap = {};
         let totalDeal = 0, totalReceived = 0, totalDue = 0, totalSetup = 0, totalId = 0;
 
-        const allMonthSeenInvoices = new Set();
-
-        currentData.forEach((row, rowIndex) => {
+        currentData.forEach(row => {
             const dateKey = idxDate !== -1 ? getLocalISODate(row[idxDate]) : '';
             if (!dateKey) return;
-            const amountKey = getInvoiceAmountKey(row, rowIndex);
-            if (allMonthSeenInvoices.has(amountKey)) return;
-            allMonthSeenInvoices.add(amountKey);
             const monthKey = dateKey.slice(0, 7);
             const received = idxRecv !== -1 ? (parseFloat(row[idxRecv]) || 0) : 0;
             allDataMonthMap[monthKey] = (allDataMonthMap[monthKey] || 0) + received;
         });
 
-        const seenInvoiceAmounts = new Set();
         data.forEach(row => {
             const status = (idxStatus !== -1 ? row[idxStatus] : 'PENDING')?.toString().toUpperCase() || 'PENDING';
             const deal = idxDealing !== -1 ? (parseFloat(row[idxDealing]) || 0) : 0;
@@ -3508,26 +3510,19 @@
             const setup = idxSetup !== -1 ? (parseFloat(row[idxSetup]) || 0) : 0;
             const idAct = idxIdAct !== -1 ? (parseFloat(row[idxIdAct]) || 0) : 0;
             const due = Math.max(deal - recv, 0);
-            const originalRowIndex = currentData.indexOf(row);
-            const amountKey = getInvoiceAmountKey(row, originalRowIndex);
-            const countInvoiceAmount = !seenInvoiceAmounts.has(amountKey);
-            if (countInvoiceAmount) seenInvoiceAmounts.add(amountKey);
 
             if (!statusMap[status]) statusMap[status] = { count: 0, amount: 0 };
             statusMap[status].count++;
-            if (countInvoiceAmount) {
-                statusMap[status].amount += status === 'PENDING' ? deal : recv;
-                totalDeal += deal;
-                totalReceived += recv;
-                totalDue += due;
-                totalSetup += setup;
-            }
-            // ID activation is purpose/entry based, so it must count on every row.
+            statusMap[status].amount += status === 'PENDING' ? deal : recv;
+            totalDeal += deal;
+            totalReceived += recv;
+            totalDue += due;
+            totalSetup += setup;
             totalId += idAct;
 
             const bankName = idxBank !== -1 ? (row[idxBank] || '').toString().trim() : '';
             const bankKey = bankName || 'Unknown Bank';
-            if (countInvoiceAmount) bankMap[bankKey] = (bankMap[bankKey] || 0) + recv;
+            bankMap[bankKey] = (bankMap[bankKey] || 0) + recv;
 
             const purpose = idxPurpose !== -1 ? (row[idxPurpose] || 'Other').toString() : 'Other';
             getPurposeItemsForDashboard(purpose).forEach(p => {
@@ -3535,7 +3530,7 @@
             });
 
             const dStr = idxDate !== -1 ? getLocalISODate(row[idxDate]) : '';
-            if (dStr && countInvoiceAmount) {
+            if (dStr) {
                 const key = dStr.slice(0, 7);
                 monthMap[key] = (monthMap[key] || 0) + recv;
                 dailyMap[dStr] = (dailyMap[dStr] || 0) + recv;
@@ -4202,7 +4197,6 @@
     }
 
     function updateStats(data) {
-        const idxInvoice = getColIndex('INVOICE NO.');
         const idxStatus  = getColIndex('PAYMENT STATUS');
         const idxRecv    = getColIndex('RECEIVED AMOUNT');
         const idxDealing = getColIndex('DEALING AMOUNT');
@@ -4212,8 +4206,6 @@
 
         let pCount=0,pAmt=0,sCount=0,sAmt=0,advCount=0,advAmt=0,refCount=0,refAmt=0, partialCount=0;
         let totCount=data.length,totAmt=0,setupCount=0,setupAmt=0,idCount=0,idActAmt=0, totalDueAmt=0;
-        const seenInvoiceAmounts = new Set();
-
         data.forEach(row => {
             let status  = row[idxStatus]?.toString().toUpperCase() || '';
             let rAmt    = parseFloat(row[idxRecv])    || 0;
@@ -4221,35 +4213,27 @@
             let supAmt  = parseFloat(row[idxSetup])   || 0;
             let idAmt   = parseFloat(row[idxIdAct])   || 0;
             let loginId = row[idxLogin]?.toString().trim() || '';
-            const originalRowIndex = currentData.indexOf(row);
-            const invoiceNo = idxInvoice !== -1 ? (row[idxInvoice] || '').toString().trim().toUpperCase() : '';
-            const amountKey = invoiceNo ? `invoice:${invoiceNo}` : `row:${originalRowIndex}`;
-            const countInvoiceAmount = !seenInvoiceAmounts.has(amountKey);
-            if (countInvoiceAmount) seenInvoiceAmounts.add(amountKey);
             
             if (status !== 'REFUND') {
-                // Login/ID activation stays entry based: every selected purpose can add its own amount.
                 if (loginId !== '') idCount++;
                 idActAmt += idAmt;
 
-                if (countInvoiceAmount) {
-                    if (supAmt !== 0) setupCount++;
-                    setupAmt += supAmt;
+                if (supAmt !== 0) setupCount++;
+                setupAmt += supAmt;
 
-                    // Same invoice contributes its due amount only once.
-                    let due = dAmt - rAmt;
-                    if(due > 0 && (status === 'PENDING' || status === 'PARTIAL')) {
-                        totalDueAmt += due;
-                    }
+                // Calculate Due Amount Market Outstanding
+                let due = dAmt - rAmt;
+                if(due > 0 && (status === 'PENDING' || status === 'PARTIAL')) {
+                    totalDueAmt += due;
                 }
             }
 
-            if      (status === 'PENDING') { pCount++;   if (countInvoiceAmount) { pAmt += dAmt; totAmt += dAmt; } }
-            else if (status === 'PARTIAL') { partialCount++; if (countInvoiceAmount) { sAmt += rAmt; totAmt += rAmt; } }
-            else if (status === 'SUCCESS') { sCount++;   if (countInvoiceAmount) { sAmt += rAmt; totAmt += rAmt; } }
-            else if (status === 'ADVANCE') { advCount++; if (countInvoiceAmount) { advAmt += rAmt; totAmt += rAmt; } }
-            else if (status === 'REFUND')  { refCount++; if (countInvoiceAmount) refAmt += rAmt; }
-            else if (countInvoiceAmount) totAmt += rAmt;
+            if      (status === 'PENDING') { pCount++;   pAmt   += dAmt; totAmt += dAmt; }
+            else if (status === 'PARTIAL') { partialCount++; sAmt += rAmt; totAmt += rAmt; }
+            else if (status === 'SUCCESS') { sCount++;   sAmt   += rAmt; totAmt += rAmt; }
+            else if (status === 'ADVANCE') { advCount++; advAmt += rAmt; totAmt += rAmt; }
+            else if (status === 'REFUND')  { refCount++; refAmt += rAmt; }
+            else totAmt += rAmt;
         });
 
         document.getElementById('statsArea').innerHTML = `
