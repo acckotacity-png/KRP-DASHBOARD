@@ -308,6 +308,8 @@
         .btn-bell { background: #ffe6e6; color: #ee5d50; animation: pulse 2s infinite; }
         .btn-sms { background: #eaf4ff; color: #0b7bd3; }
         .btn-call { background: #e6fcf5; color: #05a77d; text-decoration: none; }
+        .ledger-payment-btn { border: 0; border-radius: 7px; padding: 5px 9px; background: #05a77d; color: #fff; font-size: 10px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+        #ledgerPaymentModal.active { z-index: 2300; }
         
         @keyframes pulse {
             0% { transform: scale(1); }
@@ -1144,7 +1146,7 @@
                             <label class="multi-select-option"><input type="checkbox" value="KRP APPROVAL TOOL" onchange="updateMultiSelect('purpose')"> KRP APPROVAL TOOL</label>
                             <div class="purpose-year-row">
                                 <label for="purposeYear">Year</label>
-                                <select id="purposeYear" class="purpose-year-select" onchange="updateMultiSelect('purpose')"></select>
+                                <select id="purposeYear" class="purpose-year-select" onchange="updatePurposeYearAndClose('purpose')"></select>
                             </div>
                         </div>
                     </div>
@@ -1237,7 +1239,7 @@
                         <label class="multi-select-option"><input type="checkbox" value="KRP APPROVAL TOOL" onchange="updateMultiSelect('edit_purpose')"> KRP APPROVAL TOOL</label>
                         <div class="purpose-year-row">
                             <label for="editPurposeYear">Year</label>
-                            <select id="editPurposeYear" class="purpose-year-select" onchange="updateMultiSelect('edit_purpose')"></select>
+                            <select id="editPurposeYear" class="purpose-year-select" onchange="updatePurposeYearAndClose('edit_purpose')"></select>
                         </div>
                     </div>
                 </div>
@@ -1332,6 +1334,26 @@
             <div class="ledger-history-header"><span><i class="fas fa-clock-rotate-left"></i> Update History</span><span>Saved with date and time</span></div>
             <div id="ledgerHistoryBody" class="ledger-history-body"><div class="ledger-history-empty">Open a ledger to see its update history.</div></div>
         </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="ledgerPaymentModal">
+    <div class="modal-content" style="max-width:480px;">
+        <div class="modal-header">
+            <span><i class="fas fa-money-bill-transfer"></i> Ledger Payment / Refund</span>
+            <i class="fas fa-times close-modal" onclick="closeLedgerPaymentModal()"></i>
+        </div>
+        <input type="hidden" id="ledgerPaymentRowIndex">
+        <div class="form-grid">
+            <div class="form-group"><label>Invoice</label><input type="text" id="ledgerPaymentInvoice" readonly></div>
+            <div class="form-group"><label>Customer</label><input type="text" id="ledgerPaymentCustomer" readonly></div>
+            <div class="form-group"><label class="required">Entry Type</label><select id="ledgerPaymentType"><option value="PAYMENT">Payment Received</option><option value="REFUND">Refund Paid</option></select></div>
+            <div class="form-group"><label class="required">Date</label><input type="date" id="ledgerPaymentDate" required></div>
+            <div class="form-group"><label class="required">Amount (₹)</label><input type="number" id="ledgerPaymentAmount" min="0.01" step="0.01" inputmode="decimal" required></div>
+            <div class="form-group"><label>UTR / TRN No.</label><input type="text" id="ledgerPaymentUtr" inputmode="numeric" autocomplete="off"></div>
+        </div>
+        <div class="form-group" style="margin-top:12px;"><label>Remarks</label><textarea id="ledgerPaymentRemarks" rows="2" placeholder="Optional payment/refund remarks"></textarea></div>
+        <button type="button" class="btn-submit" id="saveLedgerPaymentBtn" style="width:100%;" onclick="saveLedgerPaymentEntry()"><i class="fas fa-save"></i> Save Entry</button>
     </div>
 </div>
 
@@ -1591,6 +1613,22 @@
     let activeDefaulterMatch = null;
     let dismissedDefaulterLookupKey = '';
     let currentIdActivationSerialMap = new Map();
+    const DASHBOARD_ACTIVE_TAB_KEY = 'krp_active_dashboard_tab';
+    const DASHBOARD_TABS = ['form', 'tracker', 'dashboard', 'expense', 'udhari', 'notepad', 'transaction'];
+    let currentActiveTab = '';
+
+    function getSavedDashboardTab() {
+        try {
+            const savedTab = localStorage.getItem(DASHBOARD_ACTIVE_TAB_KEY) || '';
+            return DASHBOARD_TABS.includes(savedTab) ? savedTab : 'form';
+        } catch (e) {
+            return 'form';
+        }
+    }
+
+    function saveDashboardTab(tab) {
+        try { localStorage.setItem(DASHBOARD_ACTIVE_TAB_KEY, tab); } catch (e) {}
+    }
 
     // ─── INIT ─────────────────────────────────────────────────────
     function getLocalISODate(dateObj) {
@@ -1696,7 +1734,13 @@
         bindRecordValidation('');
         bindRecordValidation('edit_');
         if (window.innerWidth < 768) toggleViewMode();
-        switchTab('form');
+        const restoredTab = getSavedDashboardTab();
+        if (restoredTab !== 'form' && !history.state?.krpTab) {
+            history.replaceState({ krpTab: 'form' }, '', location.href);
+            switchTab(restoredTab, { historyMode: 'push' });
+        } else {
+            switchTab(history.state?.krpTab || restoredTab, { historyMode: 'replace' });
+        }
         loadTrackerData(false);
         if ('requestIdleCallback' in window) {
             requestIdleCallback(() => loadNotepadData(false), { timeout: 3000 });
@@ -2142,7 +2186,9 @@
     }
 
     // ─── TABS ─────────────────────────────────────────────────────
-    function switchTab(tab) {
+    function switchTab(tab, options = {}) {
+        if (!DASHBOARD_TABS.includes(tab)) tab = 'form';
+        const previousTab = currentActiveTab;
         closeMobileNav();
         document.body.classList.toggle('notepad-view', tab === 'notepad');
         document.body.classList.toggle('transaction-view', tab === 'transaction' || tab === 'udhari' || tab === 'expense');
@@ -2196,7 +2242,27 @@
             document.querySelector('[data-tab="tracker"]').classList.add('active');
             loadTrackerData(false);
         }
+
+        currentActiveTab = tab;
+        saveDashboardTab(tab);
+
+        const historyMode = options.historyMode || 'push';
+        if (historyMode === 'replace') {
+            history.replaceState({ ...(history.state || {}), krpTab: tab }, '', location.href);
+        } else if (historyMode === 'push' && (
+            (previousTab && previousTab !== tab) ||
+            (!previousTab && history.state?.krpTab !== tab)
+        )) {
+            history.pushState({ krpTab: tab }, '', location.href);
+        }
     }
+
+    window.addEventListener('popstate', function(event) {
+        const previousTab = event.state?.krpTab;
+        if (DASHBOARD_TABS.includes(previousTab)) {
+            switchTab(previousTab, { historyMode: 'none' });
+        }
+    });
 
     // ─── MONTH DROPDOWN ───────────────────────────────────────────
     function toggleMobileNav() {
@@ -2694,7 +2760,7 @@
             .map((row, index) => ({ row, index }))
             .filter(item => normalizeContactLedgerKey(item.row[idxContact]) === contactKey);
 
-        let totalDeal = 0, totalReceived = 0, totalBalance = 0;
+        let totalDeal = 0, totalReceived = 0, totalRefund = 0;
         const rowsHtml = ledgerRows.map(item => {
             const row = item.row;
             const statusVal = (row[idxStatus]?.toString().toUpperCase() || 'PENDING');
@@ -2706,10 +2772,10 @@
                                statusVal === 'PARTIAL' ? 'badge-partial' : 'badge-pending';
             const deal = parseFloat(row[idxDeal] || 0) || 0;
             const received = parseFloat(row[idxRecv] || 0) || 0;
-            const balance = Math.max(deal - received, 0);
+            const balance = statusVal === 'REFUND' ? 0 : Math.max(deal - received, 0);
             totalDeal += deal;
-            totalReceived += received;
-            totalBalance += balance;
+            if (statusVal === 'REFUND') totalRefund += received;
+            else totalReceived += received;
 
             return `<tr>
                 <td>${escapeHtml(formatDisplayDate(row[idxDate]) || '-')}</td>
@@ -2719,12 +2785,13 @@
                 <td class="ledger-remarks">${escapeHtml(row[idxServiceRemarks] || '-')}</td>
                 <td class="ledger-remarks">${escapeHtml(row[idxLogin] || '-')}</td>
                 <td>${formatLedgerMoney(deal)}</td>
-                <td>${formatLedgerMoney(received)}</td>
+                <td style="${statusVal === 'REFUND' ? 'color:#ee5d50;font-weight:700;' : ''}">${statusVal === 'REFUND' ? '- ' : ''}${formatLedgerMoney(received)}</td>
                 <td class="ledger-due ${balance > 0 ? 'positive' : ''}">${formatLedgerMoney(balance)}</td>
                 <td>${escapeHtml(row[idxUtr] || '-')}</td>
                 <td class="ledger-remarks">${escapeHtml(row[idxRemarks] || '-')}</td>
                 <td class="ledger-actions">
                     <div class="action-icons">
+                        <button type="button" class="ledger-payment-btn" onclick="openLedgerPaymentModal(${item.index})" title="Add Payment or Refund Entry"><i class="fas fa-money-bill-wave"></i> Payment</button>
                         <button type="button" class="action-btn btn-edit" onclick="editLedgerRecord(${item.index})" title="Full Edit"><i class="fas fa-edit"></i></button>
                         <button type="button" class="action-btn btn-config" onclick="quickUpdateLedgerRecord(${item.index})" title="Quick Update"><i class="fas fa-sliders-h"></i></button>
                         ${canSendReminder ? `<button type="button" class="action-btn btn-sms" onclick="sendSmsReminder(${item.index})" title="Send SMS Reminder"><i class="fas fa-sms"></i></button>` : ''}
@@ -2734,11 +2801,13 @@
             </tr>`;
         }).join('');
 
+        const totalBalance = Math.max(totalDeal - totalReceived + totalRefund, 0);
         document.getElementById('ledgerContactTitle').textContent = contactText;
         document.getElementById('ledgerSummary').innerHTML = `
             <div class="ledger-summary-item"><span>Total Entries</span><strong>${ledgerRows.length}</strong></div>
             <div class="ledger-summary-item"><span>Total Deal</span><strong>${formatLedgerMoney(totalDeal)}</strong></div>
             <div class="ledger-summary-item"><span>Total Received</span><strong>${formatLedgerMoney(totalReceived)}</strong></div>
+            <div class="ledger-summary-item"><span>Total Refund</span><strong style="color:#ee5d50;">${formatLedgerMoney(totalRefund)}</strong></div>
             <div class="ledger-summary-item balance"><span>Balance</span><strong>${formatLedgerMoney(totalBalance)}</strong></div>
         `;
         document.getElementById('ledgerTableBody').innerHTML = rowsHtml || '<tr><td colspan="12" style="text-align:center; padding:20px;">No records found</td></tr>';
@@ -2756,6 +2825,90 @@
     }
     function quickUpdateLedgerRecord(rowIndex) {
         openPaymentModal(rowIndex);
+    }
+    function openLedgerPaymentModal(rowIndex) {
+        const record = currentData[rowIndex];
+        if (!record) return showMessage('Ledger record not found', 'error');
+        document.getElementById('ledgerPaymentRowIndex').value = rowIndex;
+        document.getElementById('ledgerPaymentInvoice').value = showSheetText(record[getColIndex('INVOICE NO.')]).trim();
+        document.getElementById('ledgerPaymentCustomer').value = showSheetText(record[getColIndex('CONTACT NO. OR NAME')]).trim();
+        document.getElementById('ledgerPaymentType').value = 'PAYMENT';
+        document.getElementById('ledgerPaymentDate').value = getLocalISODate(new Date());
+        document.getElementById('ledgerPaymentAmount').value = '';
+        document.getElementById('ledgerPaymentUtr').value = '';
+        document.getElementById('ledgerPaymentRemarks').value = '';
+        document.getElementById('ledgerPaymentModal').classList.add('active');
+        setTimeout(() => document.getElementById('ledgerPaymentAmount')?.focus(), 50);
+    }
+    function closeLedgerPaymentModal() {
+        document.getElementById('ledgerPaymentModal')?.classList.remove('active');
+    }
+    async function saveLedgerPaymentEntry() {
+        const rowIndex = Number(document.getElementById('ledgerPaymentRowIndex').value);
+        const sourceRecord = currentData[rowIndex];
+        const entryType = document.getElementById('ledgerPaymentType').value === 'REFUND' ? 'REFUND' : 'PAYMENT';
+        const entryDate = document.getElementById('ledgerPaymentDate').value;
+        const amount = parseFloat(document.getElementById('ledgerPaymentAmount').value) || 0;
+        const utr = document.getElementById('ledgerPaymentUtr').value.trim();
+        const remarks = document.getElementById('ledgerPaymentRemarks').value.trim();
+        if (!sourceRecord) return showMessage('Original ledger record not found', 'error');
+        if (!entryDate) return showMessage('Date select karein', 'error');
+        if (amount <= 0) return showMessage('Valid amount enter karein', 'error');
+
+        const invoiceNo = showSheetText(sourceRecord[getColIndex('INVOICE NO.')]).trim();
+        const sourcePurpose = showSheetText(sourceRecord[getColIndex('PURPOSE')]).trim();
+        const formData = new FormData();
+        formData.append('action', 'add');
+        formData.append('invoiceNo', invoiceNo);
+        formData.append('date', entryDate);
+        formData.append('contactName', showSheetText(sourceRecord[getColIndex('CONTACT NO. OR NAME')]).trim());
+        formData.append('bankOwner', showSheetText(sourceRecord[getColIndex('BANK OWNER NAME')]).trim());
+        formData.append('state', showSheetText(sourceRecord[getColIndex('STATE')]).trim());
+        formData.append('purpose', `${entryType} AGAINST ${invoiceNo || sourcePurpose || 'LEDGER'}`);
+        formData.append('serviceRemarks', sourcePurpose ? `Against: ${sourcePurpose}` : '');
+        formData.append('loginId', '');
+        formData.append('dealingAmount', '0');
+        formData.append('amountDeno', '0');
+        formData.append('receivedAmount', String(amount));
+        formData.append('idActivationAmount', '0');
+        formData.append('uploadingAmount', '0');
+        formData.append('utrNo', utr);
+        formData.append('paymentStatus', entryType === 'REFUND' ? 'REFUND' : 'SUCCESS');
+        formData.append('remarks', remarks || `${entryType === 'REFUND' ? 'Refund paid' : 'Payment received'} against ${invoiceNo || 'ledger'}`);
+
+        const button = document.getElementById('saveLedgerPaymentBtn');
+        const originalHtml = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        try {
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
+            const result = await response.json();
+            if (!result.success) throw new Error(result.message || result.error || 'Save failed');
+            appendLedgerHistoryEntry(
+                activeLedgerTitle,
+                invoiceNo,
+                entryType === 'REFUND' ? 'Refund Entry' : 'Payment Entry',
+                {},
+                {
+                    invoiceNo,
+                    date: entryDate,
+                    contactName: activeLedgerTitle,
+                    purpose: `${entryType} AGAINST ${invoiceNo || sourcePurpose || 'LEDGER'}`,
+                    receivedAmount: amount,
+                    utrNo: utr,
+                    paymentStatus: entryType === 'REFUND' ? 'REFUND' : 'SUCCESS',
+                    remarks
+                }
+            );
+            closeLedgerPaymentModal();
+            showMessage(`${entryType === 'REFUND' ? 'Refund' : 'Payment'} entry saved`, 'success');
+            await loadTrackerData(true);
+        } catch (error) {
+            showMessage(error.message || 'Entry save failed', 'error');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = originalHtml;
+        }
     }
     async function deleteLedgerRecord(rowIndex) {
         await deleteRecord(rowIndex);
@@ -2848,6 +3001,13 @@
             }
             notifyValidationResult(result, prefix);
         }
+    }
+    function updatePurposeYearAndClose(fieldId) {
+        updateMultiSelect(fieldId);
+        const yearSelectId = fieldId === 'edit_purpose' ? 'editPurposeYear' : 'purposeYear';
+        const yearSelect = document.getElementById(yearSelectId);
+        if (!yearSelect || !yearSelect.value) return;
+        document.getElementById(fieldId + '-dropdown')?.classList.remove('show');
     }
     function setMultiSelectState(fieldId, valueStr) {
         const values = valueStr.split(',').map(s => s.trim()).filter(s => s);
