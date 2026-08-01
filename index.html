@@ -2760,7 +2760,7 @@
             .map((row, index) => ({ row, index }))
             .filter(item => normalizeContactLedgerKey(item.row[idxContact]) === contactKey);
 
-        let totalDeal = 0, totalReceived = 0, totalRefund = 0;
+        let totalDeal = 0, totalReceived = 0, totalRefund = 0, pendingDeal = 0, paymentApplied = 0;
         const rowsHtml = ledgerRows.map(item => {
             const row = item.row;
             const statusVal = (row[idxStatus]?.toString().toUpperCase() || 'PENDING');
@@ -2772,10 +2772,20 @@
                                statusVal === 'PARTIAL' ? 'badge-partial' : 'badge-pending';
             const deal = parseFloat(row[idxDeal] || 0) || 0;
             const received = parseFloat(row[idxRecv] || 0) || 0;
+            const purposeText = showSheetText(row[idxPurpose]).trim().toUpperCase();
             const balance = statusVal === 'REFUND' ? 0 : Math.max(deal - received, 0);
             totalDeal += deal;
-            if (statusVal === 'REFUND') totalRefund += received;
-            else totalReceived += received;
+            if (statusVal === 'REFUND') {
+                totalRefund += received;
+            } else {
+                totalReceived += received;
+            }
+            if (statusVal === 'PENDING' || statusVal === 'PARTIAL') {
+                pendingDeal += deal;
+                paymentApplied += received;
+            } else if (statusVal === 'SUCCESS' && purposeText.startsWith('PAYMENT AGAINST')) {
+                paymentApplied += received;
+            }
 
             return `<tr>
                 <td>${escapeHtml(formatDisplayDate(row[idxDate]) || '-')}</td>
@@ -2801,7 +2811,7 @@
             </tr>`;
         }).join('');
 
-        const totalBalance = Math.max(totalDeal - totalReceived + totalRefund, 0);
+        const totalBalance = Math.max(pendingDeal - paymentApplied + totalRefund, 0);
         document.getElementById('ledgerContactTitle').textContent = contactText;
         document.getElementById('ledgerSummary').innerHTML = `
             <div class="ledger-summary-item"><span>Total Entries</span><strong>${ledgerRows.length}</strong></div>
@@ -3617,6 +3627,42 @@
         return 'Rs. ' + (parseFloat(value) || 0).toLocaleString('en-IN');
     }
 
+    function calculatePendingDueFromEntries(rows) {
+        const idxInv = getColIndex('INVOICE NO.');
+        const idxContact = getColIndex('CONTACT NO. OR NAME');
+        const idxStatus = getColIndex('PAYMENT STATUS');
+        const idxPurpose = getColIndex('PURPOSE');
+        const idxDeal = getColIndex('DEALING AMOUNT');
+        const idxRecv = getColIndex('RECEIVED AMOUNT');
+        const groups = new Map();
+
+        rows.forEach((row, rowIndex) => {
+            const invoice = idxInv !== -1 ? showSheetText(row[idxInv]).trim().toUpperCase() : '';
+            const contact = idxContact !== -1 ? normalizeContactLedgerKey(row[idxContact]) : '';
+            const key = invoice ? `${contact}|${invoice}` : `row:${rowIndex}`;
+            const group = groups.get(key) || { pendingDeal: 0, paid: 0, refunded: 0 };
+            const status = idxStatus !== -1 ? showSheetText(row[idxStatus]).trim().toUpperCase() : '';
+            const purpose = idxPurpose !== -1 ? showSheetText(row[idxPurpose]).trim().toUpperCase() : '';
+            const deal = idxDeal !== -1 ? (parseFloat(row[idxDeal]) || 0) : 0;
+            const received = idxRecv !== -1 ? (parseFloat(row[idxRecv]) || 0) : 0;
+
+            if (status === 'PENDING' || status === 'PARTIAL') {
+                group.pendingDeal += deal;
+                group.paid += received;
+            } else if (status === 'SUCCESS' && purpose.startsWith('PAYMENT AGAINST')) {
+                group.paid += received;
+            } else if (status === 'REFUND' && purpose.startsWith('REFUND AGAINST')) {
+                group.refunded += received;
+            }
+            groups.set(key, group);
+        });
+
+        return Array.from(groups.values()).reduce(
+            (sum, group) => sum + Math.max(group.pendingDeal - group.paid + group.refunded, 0),
+            0
+        );
+    }
+
     function renderBarRows(items, maxValue, className = '') {
         if (!items.length) return '<div class="empty-analytics">No data available</div>';
         return items.map(item => {
@@ -3671,10 +3717,10 @@
 
             if (!statusMap[status]) statusMap[status] = { count: 0, amount: 0 };
             statusMap[status].count++;
-            statusMap[status].amount += status === 'PENDING' ? deal : recv;
+            statusMap[status].amount += (status === 'PENDING' || status === 'PARTIAL') ? due : recv;
             totalDeal += deal;
             totalReceived += recv;
-            totalDue += due;
+            if (status === 'PENDING' || status === 'PARTIAL') totalDue += due;
             totalSetup += setup;
             totalId += idAct;
             if (status !== 'REFUND' && idAct > 0) {
@@ -3697,6 +3743,10 @@
                 dailyMap[dStr] = (dailyMap[dStr] || 0) + recv;
             }
         });
+
+        totalDue = calculatePendingDueFromEntries(data);
+        statusMap.PENDING.amount = totalDue;
+        statusMap.PARTIAL.amount = 0;
 
         summaryEl.innerHTML = `
             <div class="mini-kpi"><span>Total Records</span><strong>${data.length}</strong></div>
@@ -4395,13 +4445,16 @@
                 }
             }
 
-            if      (status === 'PENDING') { pCount++;   pAmt   += dAmt; totAmt += dAmt; }
-            else if (status === 'PARTIAL') { partialCount++; sAmt += rAmt; totAmt += rAmt; }
+            const remainingDue = Math.max(dAmt - rAmt, 0);
+            if      (status === 'PENDING') { pCount++;   pAmt += remainingDue; totAmt += dAmt; }
+            else if (status === 'PARTIAL') { partialCount++; pAmt += remainingDue; sAmt += rAmt; totAmt += rAmt; }
             else if (status === 'SUCCESS') { sCount++;   sAmt   += rAmt; totAmt += rAmt; }
             else if (status === 'ADVANCE') { advCount++; advAmt += rAmt; totAmt += rAmt; }
             else if (status === 'REFUND')  { refCount++; refAmt += rAmt; }
             else totAmt += rAmt;
         });
+
+        pAmt = calculatePendingDueFromEntries(data);
 
         document.getElementById('statsArea').innerHTML = `
             <div class="stat-card"><div class="stat-info"><h4 style="color:#ee5d50;">Pending / Partial</h4><div class="stat-count" style="color:#ee5d50;">${pCount + partialCount}</div><div class="stat-amount" style="color:#ee5d50;">₹${pAmt.toLocaleString('en-IN')}</div></div></div>
