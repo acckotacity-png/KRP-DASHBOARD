@@ -2861,7 +2861,8 @@
         formData.append('action', 'add');
         formData.append('invoiceNo', invoiceNo);
         formData.append('date', entryDate);
-        formData.append('contactName', showSheetText(sourceRecord[getColIndex('CONTACT NO. OR NAME')]).trim());
+        const sourceContact = showSheetText(sourceRecord[getColIndex('CONTACT NO. OR NAME')]).trim();
+        formData.append('contactName', sourceContact);
         formData.append('bankOwner', showSheetText(sourceRecord[getColIndex('BANK OWNER NAME')]).trim());
         formData.append('state', showSheetText(sourceRecord[getColIndex('STATE')]).trim());
         formData.append('purpose', `${entryType} AGAINST ${invoiceNo || sourcePurpose || 'LEDGER'}`);
