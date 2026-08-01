@@ -1340,19 +1340,19 @@
 <div class="modal-overlay" id="ledgerPaymentModal">
     <div class="modal-content" style="max-width:480px;">
         <div class="modal-header">
-            <span><i class="fas fa-money-bill-transfer"></i> Ledger Payment / Refund</span>
+            <span><i class="fas fa-money-bill-transfer"></i> Ledger Pending / Payment / Refund</span>
             <i class="fas fa-times close-modal" onclick="closeLedgerPaymentModal()"></i>
         </div>
         <input type="hidden" id="ledgerPaymentRowIndex">
         <div class="form-grid">
             <div class="form-group"><label>Invoice</label><input type="text" id="ledgerPaymentInvoice" readonly></div>
             <div class="form-group"><label>Customer</label><input type="text" id="ledgerPaymentCustomer" readonly></div>
-            <div class="form-group"><label class="required">Entry Type</label><select id="ledgerPaymentType"><option value="PAYMENT">Payment Received</option><option value="REFUND">Refund Paid</option></select></div>
+            <div class="form-group"><label class="required">Entry Type</label><select id="ledgerPaymentType"><option value="PAYMENT">Payment Received</option><option value="PENDING">Pending / New Due</option><option value="REFUND">Refund Paid</option></select></div>
             <div class="form-group"><label class="required">Date</label><input type="date" id="ledgerPaymentDate" required></div>
             <div class="form-group"><label class="required">Amount (₹)</label><input type="number" id="ledgerPaymentAmount" min="0.01" step="0.01" inputmode="decimal" required></div>
             <div class="form-group"><label>UTR / TRN No.</label><input type="text" id="ledgerPaymentUtr" inputmode="numeric" autocomplete="off"></div>
         </div>
-        <div class="form-group" style="margin-top:12px;"><label>Remarks</label><textarea id="ledgerPaymentRemarks" rows="2" placeholder="Optional payment/refund remarks"></textarea></div>
+        <div class="form-group" style="margin-top:12px;"><label>Remarks</label><textarea id="ledgerPaymentRemarks" rows="2" placeholder="Optional pending/payment/refund remarks"></textarea></div>
         <button type="button" class="btn-submit" id="saveLedgerPaymentBtn" style="width:100%;" onclick="saveLedgerPaymentEntry()"><i class="fas fa-save"></i> Save Entry</button>
     </div>
 </div>
@@ -2846,7 +2846,11 @@
     async function saveLedgerPaymentEntry() {
         const rowIndex = Number(document.getElementById('ledgerPaymentRowIndex').value);
         const sourceRecord = currentData[rowIndex];
-        const entryType = document.getElementById('ledgerPaymentType').value === 'REFUND' ? 'REFUND' : 'PAYMENT';
+        const requestedType = document.getElementById('ledgerPaymentType').value;
+        const entryType = ['PAYMENT', 'PENDING', 'REFUND'].includes(requestedType) ? requestedType : 'PAYMENT';
+        const isPendingEntry = entryType === 'PENDING';
+        const isPaidEntry = entryType === 'PAYMENT';
+        const entryLabel = entryType === 'REFUND' ? 'Refund' : isPendingEntry ? 'Pending' : 'Payment';
         const entryDate = document.getElementById('ledgerPaymentDate').value;
         const amount = parseFloat(document.getElementById('ledgerPaymentAmount').value) || 0;
         const utr = document.getElementById('ledgerPaymentUtr').value.trim();
@@ -2865,17 +2869,17 @@
         formData.append('contactName', sourceContact);
         formData.append('bankOwner', showSheetText(sourceRecord[getColIndex('BANK OWNER NAME')]).trim());
         formData.append('state', showSheetText(sourceRecord[getColIndex('STATE')]).trim());
-        formData.append('purpose', `${entryType} AGAINST ${invoiceNo || sourcePurpose || 'LEDGER'}`);
+        formData.append('purpose', `${isPendingEntry ? 'PENDING DUE' : entryType} AGAINST ${invoiceNo || sourcePurpose || 'LEDGER'}`);
         formData.append('serviceRemarks', sourcePurpose ? `Against: ${sourcePurpose}` : '');
         formData.append('loginId', '');
-        formData.append('dealingAmount', '0');
+        formData.append('dealingAmount', entryType === 'REFUND' ? '0' : String(amount));
         formData.append('amountDeno', '0');
-        formData.append('receivedAmount', String(amount));
+        formData.append('receivedAmount', isPendingEntry ? '0' : String(amount));
         formData.append('idActivationAmount', '0');
-        formData.append('uploadingAmount', '0');
+        formData.append('uploadingAmount', isPaidEntry ? String(amount) : '0');
         formData.append('utrNo', utr);
-        formData.append('paymentStatus', entryType === 'REFUND' ? 'REFUND' : 'SUCCESS');
-        formData.append('remarks', remarks || `${entryType === 'REFUND' ? 'Refund paid' : 'Payment received'} against ${invoiceNo || 'ledger'}`);
+        formData.append('paymentStatus', entryType === 'REFUND' ? 'REFUND' : isPendingEntry ? 'PENDING' : 'SUCCESS');
+        formData.append('remarks', remarks || `${entryLabel} entry against ${invoiceNo || 'ledger'}`);
 
         const button = document.getElementById('saveLedgerPaymentBtn');
         const originalHtml = button.innerHTML;
@@ -2888,21 +2892,23 @@
             appendLedgerHistoryEntry(
                 activeLedgerTitle,
                 invoiceNo,
-                entryType === 'REFUND' ? 'Refund Entry' : 'Payment Entry',
+                `${entryLabel} Entry`,
                 {},
                 {
                     invoiceNo,
                     date: entryDate,
                     contactName: activeLedgerTitle,
-                    purpose: `${entryType} AGAINST ${invoiceNo || sourcePurpose || 'LEDGER'}`,
-                    receivedAmount: amount,
+                    purpose: `${isPendingEntry ? 'PENDING DUE' : entryType} AGAINST ${invoiceNo || sourcePurpose || 'LEDGER'}`,
+                    dealingAmount: entryType === 'REFUND' ? 0 : amount,
+                    receivedAmount: isPendingEntry ? 0 : amount,
+                    uploadingAmount: isPaidEntry ? amount : 0,
                     utrNo: utr,
-                    paymentStatus: entryType === 'REFUND' ? 'REFUND' : 'SUCCESS',
+                    paymentStatus: entryType === 'REFUND' ? 'REFUND' : isPendingEntry ? 'PENDING' : 'SUCCESS',
                     remarks
                 }
             );
             closeLedgerPaymentModal();
-            showMessage(`${entryType === 'REFUND' ? 'Refund' : 'Payment'} entry saved`, 'success');
+            showMessage(`${entryLabel} entry saved`, 'success');
             await loadTrackerData(true);
         } catch (error) {
             showMessage(error.message || 'Entry save failed', 'error');
