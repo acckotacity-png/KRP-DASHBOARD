@@ -2873,6 +2873,7 @@
         const sourcePurpose = showSheetText(sourceRecord[getColIndex('PURPOSE')]).trim();
         const formData = new FormData();
         formData.append('action', 'add');
+        formData.append('allowExistingInvoice', '1');
         formData.append('invoiceNo', invoiceNo);
         formData.append('date', entryDate);
         const sourceContact = showSheetText(sourceRecord[getColIndex('CONTACT NO. OR NAME')]).trim();
@@ -2919,7 +2920,9 @@
             );
             closeLedgerPaymentModal();
             showMessage(`${entryLabel} entry saved`, 'success');
-            await loadTrackerData(true);
+            const applied = applySavedTrackerRow(result);
+            if (!applied) loadTrackerData(true);
+            else scheduleTrackerBackgroundSync();
         } catch (error) {
             showMessage(error.message || 'Entry save failed', 'error');
         } finally {
@@ -3385,6 +3388,43 @@
         renderDashboard(getDashboardFilteredData());
         if (document.getElementById('recordsTab')?.classList.contains('active')) renderRecordsTracker();
         refreshActiveContactLedger();
+    }
+
+    function renderTrackerStateFromMemory() {
+        writeTrackerCache(currentHeaders, currentData);
+        populatePurposeYears();
+        renderDashboard(getDashboardFilteredData());
+        renderTable(getTrackerFilters());
+        if (document.getElementById('recordsTab')?.classList.contains('active')) renderRecordsTracker();
+        refreshActiveContactLedger();
+    }
+
+    function applySavedTrackerRow(result, fallbackRowIndex = null) {
+        if (!result || !Array.isArray(result.savedRow)) return false;
+        if (Array.isArray(result.headers) && result.headers.length) currentHeaders = result.headers;
+        const resultIndex = Number(result.rowIndex);
+        const rowIndex = Number.isInteger(resultIndex) && resultIndex >= 0
+            ? resultIndex
+            : Number(fallbackRowIndex);
+        if (Number.isInteger(rowIndex) && rowIndex >= 0 && rowIndex <= currentData.length) {
+            currentData[rowIndex] = result.savedRow;
+        } else {
+            currentData.push(result.savedRow);
+        }
+        renderTrackerStateFromMemory();
+        return true;
+    }
+
+    function applyDeletedTrackerRow(rowIndex) {
+        const index = Number(rowIndex);
+        if (!Number.isInteger(index) || index < 0 || index >= currentData.length) return false;
+        currentData.splice(index, 1);
+        renderTrackerStateFromMemory();
+        return true;
+    }
+
+    function scheduleTrackerBackgroundSync(delay = 900) {
+        setTimeout(() => refreshTrackerDataInBackground(true), delay);
     }
 
     async function refreshTrackerDataInBackground(renderAfterRefresh = true) {
@@ -4480,9 +4520,6 @@
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
         btn.disabled = true;
 
-        // Confirm the latest live dataset before locking the next invoice number.
-        await ensureFreshTrackerDataForSubmit();
-
         const formData = new URLSearchParams();
         formData.append('action',            'add');
         formData.append('invoiceNo',         document.getElementById('invoiceNo').value);
@@ -4513,7 +4550,9 @@
                 activeDefaulterMatch = null;
                 dismissedDefaulterLookupKey = '';
                 switchTab('tracker');
-                loadTrackerData(true);
+                const applied = applySavedTrackerRow(result);
+                if (!applied) loadTrackerData(true);
+                else scheduleTrackerBackgroundSync();
             } else showMessage('Error saving data', 'error');
         } catch (error) { showMessage('Network error', 'error'); }
         finally { btn.innerHTML = ogText; btn.disabled = false; }
@@ -4604,7 +4643,9 @@
                 appendLedgerHistoryEntry(editHistoryAfter.contactName || editHistoryBefore.contactName, editHistoryAfter.invoiceNo || editHistoryBefore.invoiceNo, 'Full Edit', editHistoryBefore, editHistoryAfter);
                 showMessage('Record updated!', 'success');
                 closeFullEditModal();
-                loadTrackerData(true);
+                const applied = applySavedTrackerRow(result, Number(rowIndex));
+                if (!applied) loadTrackerData(true);
+                else scheduleTrackerBackgroundSync();
             } else showMessage(result.message || 'Update failed', 'error');
         } catch (error) { showMessage('Network error', 'error'); }
         finally { btn.innerHTML = ogText; btn.disabled = false; }
@@ -4662,7 +4703,9 @@
                 appendLedgerHistoryEntry(paymentHistoryAfter.contactName || paymentHistoryBefore.contactName, paymentHistoryAfter.invoiceNo || paymentHistoryBefore.invoiceNo, 'Quick Update', paymentHistoryBefore, paymentHistoryAfter);
                 showMessage('Updated!', 'success');
                 closePaymentModal();
-                loadTrackerData(true);
+                const applied = applySavedTrackerRow(result, Number(rowIndex));
+                if (!applied) loadTrackerData(true);
+                else scheduleTrackerBackgroundSync();
             } else showMessage(result.message || 'Failed', 'error');
         } catch (e) { showMessage('Network error', 'error'); }
     }
@@ -4917,7 +4960,9 @@
             const result   = await response.json();
             if (result.success) {
                 showMessage('Deleted successfully', 'success');
-                loadTrackerData(true);
+                const applied = applyDeletedTrackerRow(rowIndex);
+                if (!applied) loadTrackerData(true);
+                else scheduleTrackerBackgroundSync();
             }
             else showMessage(result.message || 'Delete failed', 'error');
         } catch (e) { showMessage('Network error', 'error'); }
